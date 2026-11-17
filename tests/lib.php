@@ -105,16 +105,26 @@ function insert(string $tabel, array $data): int
     return (int) db()->lastInsertId();
 }
 
-/** Buku + $jumlah eksemplar tersedia. @return array{buku_id:int, eksemplar:int[]} */
-function fx_buku(int $jumlah_eksemplar = 1, array $o = []): array
+/** Kategori baru dengan kode unik. */
+function fx_kategori(): int
 {
     static $n = 0;
     $n++;
-    $o['kategori_id'] ??= insert('kategori', ['kode' => "K$n", 'nama' => "Kategori $n"]);
-    $buku_id = insert('buku', $o + ['judul' => "Buku Uji $n", 'penulis' => "Penulis $n"]);
-    $eks = [];
-    for ($i = 1; $i <= $jumlah_eksemplar; $i++) {
-        $eks[] = insert('eksemplar', ['buku_id' => $buku_id, 'kode_eksemplar' => sprintf('BK%04d-%02d', $buku_id, $i)]);
-    }
-    return ['buku_id' => $buku_id, 'eksemplar' => $eks];
+    return insert("kategori", ["kode" => "K$n" . mt_rand(100, 999), "nama" => "Kategori $n"]);
+}
+
+function data_buku(array $o = []): array
+{
+    static $n = 0;
+    $n++;
+    $o["kategori_id"] ??= fx_kategori();
+    return $o + ["judul" => "Buku Uji $n", "penulis" => "Penulis $n", "jumlah_eksemplar" => 1, "harga" => 0];
+}
+
+/** Buku + $jumlah eksemplar tersedia (lewat simpan_buku). @return array{buku_id:int, eksemplar:int[]} */
+function fx_buku(int $jumlah_eksemplar = 1, array $o = []): array
+{
+    $buku_id = simpan_buku(data_buku(["jumlah_eksemplar" => $jumlah_eksemplar] + $o), null);
+    $eks = array_map("intval", array_column(db_all("SELECT id FROM eksemplar WHERE buku_id = ? ORDER BY id", [$buku_id]), "id"));
+    return ["buku_id" => $buku_id, "eksemplar" => $eks];
 }

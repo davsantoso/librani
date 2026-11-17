@@ -68,3 +68,14 @@ function is_post(): bool
 {
     return ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
 }
+
+/** Sampul buku: <img> lazy jika ada foto, selain itu placeholder berisi judul. $ukuran 'thumb' | 'besar'. */
+function cover_html(array $buku, string $ukuran = 'thumb'): string
+{
+    $file = $ukuran === 'thumb' ? ($buku['foto_thumb'] ?? null) : ($buku['foto_cover'] ?? null);
+    $path = $ukuran === 'thumb' ? 'uploads/cover/thumb/' : 'uploads/cover/';
+    if ($file) {
+        return '<img class="cover" loading="lazy" src="' . e(url($path . $file)) . '" alt="Sampul ' . e($buku['judul']) . '">';
+    }
+    return '<div class="cover-placeholder" role="img" aria-label="Sampul ' . e($buku['judul']) . '"><span>' . e($buku['judul']) . '</span></div>';
+}

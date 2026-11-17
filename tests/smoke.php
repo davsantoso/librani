@@ -44,6 +44,13 @@ $kirim['admin'][] = ['modules/master/rak/form.php', ['kode' => "S$n", 'nama' => 
 array_push($halaman['admin'], 'modules/master/users/index.php', 'modules/master/users/form.php', 'modules/master/users/form.php?id=1');
 $terlarang['petugas'][] = 'modules/master/users/index.php';
 $terlarang['anggota'][] = 'modules/master/users/form.php';
+// --- Buku (Task 7)
+foreach (['admin', 'petugas'] as $r) {
+    array_push($halaman[$r], 'modules/master/buku/index.php', 'modules/master/buku/form.php', 'modules/master/buku/form.php?id=1', 'modules/master/buku/detail.php?id=1');
+    $kirim[$r][] = ['modules/master/buku/form.php', ['judul' => "Buku Smoke $r $n", 'penulis' => 'Penulis Smoke', 'kategori_id' => '1', 'jumlah_eksemplar' => '2', 'harga' => '50000']];
+}
+array_push($terlarang['anggota'], 'modules/master/buku/index.php', 'modules/master/buku/form.php');
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------

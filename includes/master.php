@@ -163,3 +163,124 @@ function simpan_user(array $in, ?int $id = null): int
         ->execute([$v('nama'), $v('username'), $v('email'), password_hash($password, PASSWORD_DEFAULT), $v('role'), $aktif]);
     return (int) db()->lastInsertId();
 }
+
+// ===================== Buku & eksemplar =====================
+
+/**
+ * Buat $jumlah eksemplar baru (status tersedia) untuk buku; kode melanjutkan urutan terakhir.
+ * @return int[] id eksemplar baru
+ */
+function buat_eksemplar(int $buku_id, int $jumlah, ?int $rak_id, string $sumber = 'beli', ?string $tanggal = null): array
+{
+    $terakhir = (int) db_val(
+        "SELECT MAX(CAST(SUBSTRING_INDEX(kode_eksemplar, '-', -1) AS UNSIGNED)) FROM eksemplar WHERE buku_id = ?",
+        [$buku_id]
+    );
+    $st = db()->prepare('INSERT INTO eksemplar (buku_id, rak_id, kode_eksemplar, sumber, tgl_pengadaan) VALUES (?, ?, ?, ?, ?)');
+    $ids = [];
+    for ($i = 1; $i <= $jumlah; $i++) {
+        $st->execute([$buku_id, $rak_id, kode_eksemplar($buku_id, $terakhir + $i), $sumber, $tanggal ?? hari_ini()]);
+        $ids[] = (int) db()->lastInsertId();
+    }
+    return $ids;
+}
+
+/**
+ * Tambah ($id null) atau ubah buku. Saat tambah, eksemplar dibuat sebanyak $in['jumlah_eksemplar'].
+ * $file_cover: elemen $_FILES (boleh null / UPLOAD_ERR_NO_FILE). $in['hapus_cover'] menghapus sampul.
+ * Melempar RuntimeException berisi pesan untuk pengguna.
+ */
+function simpan_buku(array $in, ?array $file_cover, ?int $id = null): int
+{
+    $v = fn(string $k) => trim((string) ($in[$k] ?? ''));
+    $lama = $id ? db_row('SELECT * FROM buku WHERE id = ?', [$id]) : null;
+    if ($id && !$lama) {
+        throw new RuntimeException('Buku tidak ditemukan.');
+    }
+
+    $isbn = preg_replace('/[\s\-]/', '', $v('isbn'));
+    $data = [
+        'isbn' => $isbn === '' ? null : $isbn,
+        'judul' => $v('judul'),
+        'penulis' => $v('penulis'),
+        'penerbit_id' => $v('penerbit_id') === '' ? null : (int) $v('penerbit_id'),
+        'kategori_id' => (int) $v('kategori_id'),
+        'tahun_terbit' => $v('tahun_terbit') === '' ? null : $v('tahun_terbit'),
+        'halaman' => $v('halaman') === '' ? null : $v('halaman'),
+        'sinopsis' => $v('sinopsis') === '' ? null : $v('sinopsis'),
+        'harga' => $v('harga') === '' ? '0' : $v('harga'),
+    ];
+
+    if ($data['judul'] === '') {
+        throw new RuntimeException('Judul wajib diisi.');
+    }
+    if ($data['penulis'] === '') {
+        throw new RuntimeException('Penulis wajib diisi.');
+    }
+    if (!db_val('SELECT 1 FROM kategori WHERE id = ?', [$data['kategori_id']])) {
+        throw new RuntimeException('Kategori wajib dipilih.');
+    }
+    if ($data['penerbit_id'] !== null && !db_val('SELECT 1 FROM penerbit WHERE id = ?', [$data['penerbit_id']])) {
+        throw new RuntimeException('Penerbit tidak valid.');
+    }
+    if ($data['isbn'] !== null && !preg_match('/^[0-9X]{10,13}$/i', $data['isbn'])) {
+        throw new RuntimeException('ISBN harus 10 atau 13 digit.');
+    }
+    if ($data['isbn'] !== null && db_val('SELECT 1 FROM buku WHERE isbn = ? AND id <> ?', [$data['isbn'], (int) $id])) {
+        throw new RuntimeException('ISBN sudah dipakai buku lain.');
+    }
+    if ($data['tahun_terbit'] !== null && (!ctype_digit($data['tahun_terbit']) || $data['tahun_terbit'] < 1000 || $data['tahun_terbit'] > (int) date('Y') + 1)) {
+        throw new RuntimeException('Tahun terbit tidak valid.');
+    }
+    if ($data['halaman'] !== null && (!ctype_digit($data['halaman']) || $data['halaman'] > 30000)) {
+        throw new RuntimeException('Jumlah halaman tidak valid.');
+    }
+    if (!ctype_digit($data['harga'])) {
+        throw new RuntimeException('Harga harus angka 0 atau lebih.');
+    }
+    $jumlah = (int) ($in['jumlah_eksemplar'] ?? 0);
+    if (!$id && ($jumlah < 1 || $jumlah > 50)) {
+        throw new RuntimeException('Jumlah eksemplar 1–50.');
+    }
+    $rak_id = ($in['rak_id'] ?? '') === '' ? null : (int) $in['rak_id'];
+
+    // Upload lebih dulu; jika DB gagal, file baru dihapus lagi.
+    $cover = null;
+    if ($file_cover && ($file_cover['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+        $cover = simpan_gambar($file_cover, 'cover', 2_000_000, ['image/jpeg', 'image/png', 'image/webp'], 600, 200);
+    }
+    if ($cover) {
+        $data['foto_cover'] = $cover['file'];
+        $data['foto_thumb'] = $cover['thumb'] ?? $cover['file'];
+    } elseif ($lama && !empty($in['hapus_cover'])) {
+        $data['foto_cover'] = $data['foto_thumb'] = null;
+    }
+
+    $db = db();
+    $db->beginTransaction();
+    try {
+        $kolom = array_keys($data);
+        if ($id) {
+            $set = implode(', ', array_map(fn($k) => "$k = ?", $kolom));
+            $db->prepare("UPDATE buku SET $set WHERE id = ?")->execute([...array_values($data), $id]);
+        } else {
+            $db->prepare('INSERT INTO buku (' . implode(', ', $kolom) . ') VALUES (' . implode(', ', array_fill(0, count($kolom), '?')) . ')')
+                ->execute(array_values($data));
+            $id = (int) $db->lastInsertId();
+            buat_eksemplar($id, $jumlah, $rak_id, ($in['sumber'] ?? 'beli') === 'hibah' ? 'hibah' : 'beli');
+        }
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        if ($cover) {
+            hapus_gambar('cover', $cover['file']);
+        }
+        throw $e;
+    }
+
+    // Sampul lama dibuang setelah data baru pasti tersimpan.
+    if ($lama && array_key_exists('foto_cover', $data) && $lama['foto_cover']) {
+        hapus_gambar('cover', $lama['foto_cover']);
+    }
+    return $id;
+}

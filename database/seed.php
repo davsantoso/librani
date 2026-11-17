@@ -38,4 +38,20 @@ db()->prepare(
 )->execute([$uAnggota, hari_ini(), tambah_hari(hari_ini(), (int) setting('masa_berlaku_anggota')), $petugas1]);
 
 echo "Akun demo: admin/admin123, petugas1/petugas123, anggota1/anggota123\n";
+
+// ---- Master sementara (diganti data buku asli di Task 22) ----
+$kat = (function () {
+    db()->exec("INSERT INTO kategori (kode, nama) VALUES ('NOV', 'Novel & Fiksi')");
+    return (int) db()->lastInsertId();
+})();
+db()->exec("INSERT INTO penerbit (nama, kota) VALUES ('Bentang Pustaka', 'Yogyakarta')");
+$pen = (int) db()->lastInsertId();
+db()->exec("INSERT INTO rak (kode, nama, lantai) VALUES ('A1', 'Rak Fiksi A1', 1)");
+$rak = (int) db()->lastInsertId();
+simpan_buku([
+    'judul' => 'Laskar Pelangi', 'penulis' => 'Andrea Hirata', 'penerbit_id' => $pen, 'kategori_id' => $kat,
+    'tahun_terbit' => '2005', 'halaman' => '529', 'harga' => '89000', 'jumlah_eksemplar' => 3, 'rak_id' => $rak,
+    'sinopsis' => 'Kisah sepuluh anak Belitung yang bersekolah di SD Muhammadiyah yang hampir ditutup.',
+], null);
+echo "Data master contoh dimuat.\n";
 echo "Selesai.\n";
