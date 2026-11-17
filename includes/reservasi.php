@@ -85,6 +85,12 @@ function batal_reservasi(int $reservasi_id, int $anggota_id): void
 function alokasikan_reservasi(int $eksemplar_id, ?string $tanggal = null): bool
 {
     $tanggal ??= hari_ini();
+    // Hanya eksemplar yang bebas (tersedia, atau dilepas dari reservasi lain) yang boleh dikunci untuk antrean.
+    $status = db_val('SELECT status FROM eksemplar WHERE id = ? FOR UPDATE', [$eksemplar_id]);
+    if (!in_array($status, ['tersedia', 'direservasi'], true)
+        || ($status === 'direservasi' && db_val("SELECT 1 FROM reservasi WHERE eksemplar_id = ? AND status = 'siap'", [$eksemplar_id]))) {
+        return false;
+    }
     $r = db_row(
         "SELECT r.id FROM reservasi r JOIN eksemplar e ON e.buku_id = r.buku_id
          WHERE e.id = ? AND r.status = 'menunggu' ORDER BY r.tgl_reservasi, r.id LIMIT 1 FOR UPDATE",
@@ -111,23 +117,34 @@ function lepaskan_eksemplar(int $eksemplar_id, ?string $tanggal = null): void
 function cek_reservasi_kadaluarsa(?string $tanggal = null): int
 {
     $tanggal ??= hari_ini();
-    $lewat = db_all("SELECT id, eksemplar_id FROM reservasi WHERE status = 'siap' AND tgl_batas_ambil < ?", [$tanggal]);
-    if (!$lewat) {
-        return 0;
+    $jumlah = 0;
+    foreach (db_all("SELECT id FROM reservasi WHERE status = 'siap' AND tgl_batas_ambil < ?", [$tanggal]) as $r) {
+        $jumlah += (int) kadaluarsakan_reservasi((int) $r['id'], $tanggal);
     }
+    return $jumlah;
+}
+
+/**
+ * Kadaluarsakan satu reservasi 'siap' yang lewat batas ambil, lalu lepaskan eksemplarnya.
+ * Status dicek ulang dengan baris terkunci, jadi pemanggilan basi (reservasi sudah diambil/dibatalkan
+ * oleh request lain) tidak mengubah apa pun. @return bool true jika benar-benar dikadaluarsakan
+ */
+function kadaluarsakan_reservasi(int $reservasi_id, string $tanggal): bool
+{
     $db = db();
     $db->beginTransaction();
     try {
-        foreach ($lewat as $r) {
-            $db->prepare("UPDATE reservasi SET status = 'kadaluarsa' WHERE id = ? AND status = 'siap'")->execute([$r['id']]);
+        $r = db_row("SELECT eksemplar_id FROM reservasi WHERE id = ? AND status = 'siap' AND tgl_batas_ambil < ? FOR UPDATE", [$reservasi_id, $tanggal]);
+        if ($r) {
+            $db->prepare("UPDATE reservasi SET status = 'kadaluarsa' WHERE id = ?")->execute([$reservasi_id]);
             lepaskan_eksemplar((int) $r['eksemplar_id'], $tanggal);
         }
         $db->commit();
+        return (bool) $r;
     } catch (Throwable $e) {
         $db->rollBack();
         throw $e;
     }
-    return count($lewat);
 }
 
 /** Reservasi milik anggota beserta posisi antrean (untuk yang menunggu). */

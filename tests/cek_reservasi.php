@@ -67,3 +67,22 @@ simpan_peminjaman($a1, $b2['eksemplar'], $p, '2026-11-20');
 db()->prepare("UPDATE eksemplar SET status = 'dipinjam' WHERE id = ?")->execute([$b3['eksemplar'][0]]);
 buat_reservasi($a2, $b2['buku_id'], '2026-11-20');
 harus_gagal('melebihi maks reservasi', fn() => buat_reservasi($a2, $b3['buku_id'], '2026-11-20'), 'Batas reservasi');
+
+// ---- Review: race kedaluwarsa (pemanggilan basi tidak boleh mengalokasikan eksemplar yang sudah dipinjam)
+reset_db();
+$p = fx_petugas();
+[$a1, $a2, $a3] = [fx_anggota(), fx_anggota(), fx_anggota()];
+$b = fx_buku(1);
+$e = $b['eksemplar'][0];
+$pid = simpan_peminjaman($a1, [$e], $p, '2026-11-17');
+$r2 = buat_reservasi($a2, $b['buku_id'], '2026-11-17');
+$r3 = buat_reservasi($a3, $b['buku_id'], '2026-11-18');
+proses_kembali([['detail_id' => detail_id_dari($pid), 'kondisi' => 'baik']], $p, '2026-11-20');   // r2 siap
+simpan_peminjaman($a2, [$e], $p, '2026-11-21');                                                     // r2 diambil
+sama('alokasi ke eksemplar yang dipinjam ditolak', false, alokasikan_reservasi($e, '2026-11-23'));
+sama('eksemplar tetap dipinjam', 'dipinjam', db_val('SELECT status FROM eksemplar WHERE id = ?', [$e]));
+sama('antrean berikutnya tetap menunggu', 'menunggu', db_val('SELECT status FROM reservasi WHERE id = ?', [$r3]));
+sama('kadaluarsakan reservasi yang sudah diambil (basi) → tidak terjadi', false, kadaluarsakan_reservasi($r2, '2026-11-23'));
+sama('status reservasi diambil tidak berubah', 'diambil', db_val('SELECT status FROM reservasi WHERE id = ?', [$r2]));
+harus_gagal('anggota lain tidak bisa meminjam eksemplar yang sama', fn() => simpan_peminjaman($a3, [$e], $p, '2026-11-23'), 'tidak tersedia');
+sama('hanya satu detail aktif untuk eksemplar', 1, (int) db_val("SELECT COUNT(*) FROM peminjaman_detail WHERE eksemplar_id = ? AND status = 'dipinjam'", [$e]));
