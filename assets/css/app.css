@@ -1,0 +1,23 @@
+body { background: #f4f6f9; }
+.min-w-0 { min-width: 0; }
+.sidebar { width: 240px; min-height: calc(100vh - 57px); }
+@media (min-width: 992px) { .sidebar { position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto; } }
+.sidebar .nav-link { color: rgba(255,255,255,.75); padding: .45rem 1rem; }
+.sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.06); }
+.sidebar .nav-link.active { color: #fff; background: var(--bs-primary); }
+.sidebar .nav-link .bi { margin-right: .5rem; }
+.sidebar-grup { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.4); padding: .9rem 1rem .25rem; }
+.kartu-angka .angka { font-size: 1.6rem; font-weight: 600; }
+.auth-box { max-width: 440px; margin: 6vh auto; }
+
+/* Sampul buku rasio 2:3 + placeholder berisi judul */
+.cover { aspect-ratio: 2 / 3; width: 100%; object-fit: cover; border-radius: .375rem; background: #e9ecef; display: block; }
+.cover-placeholder { aspect-ratio: 2 / 3; width: 100%; border-radius: .375rem; display: flex; align-items: center; justify-content: center; text-align: center; padding: .5rem; color: #fff; font-weight: 600; font-size: .8rem; line-height: 1.2; background: linear-gradient(135deg, #3d5a80, #293241); overflow: hidden; }
+.cover-kecil { width: 48px; flex-shrink: 0; }
+.cover-kecil .cover-placeholder { font-size: .45rem; padding: .2rem; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    main { padding: 0 !important; }
+}

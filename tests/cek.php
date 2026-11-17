@@ -8,7 +8,7 @@ require __DIR__ . '/../config/config.php';
 (new PDO('mysql:host=' . DB_HOST . ';charset=utf8mb4', DB_USER, DB_PASS))
     ->exec('CREATE DATABASE IF NOT EXISTS librani_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
 
-require __DIR__ . '/../includes/db.php';
+require __DIR__ . '/../includes/init.php';
 require __DIR__ . '/lib.php';
 
 $filter = $argv[1] ?? '';

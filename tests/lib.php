@@ -44,15 +44,7 @@ function reset_db(): void
     $pdo->exec('DROP DATABASE IF EXISTS librani_test');
     $pdo->exec('CREATE DATABASE librani_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     $pdo->exec('USE librani_test');
+    unset($GLOBALS['_setting']);
     jalankan_sql_file(__DIR__ . '/../database/schema.sql');
 }
 
-function jalankan_sql_file(string $path): void
-{
-    $sql = (string) @file_get_contents($path);
-    foreach (preg_split('/;\s*(\r?\n|$)/', $sql) as $stmt) {
-        if (trim(preg_replace('/^\s*--.*$/m', '', $stmt)) !== '') {
-            db()->exec($stmt);
-        }
-    }
-}

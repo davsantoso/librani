@@ -1,0 +1,6 @@
+Options -Indexes
+DirectoryIndex index.php
+
+# Folder pengembangan tidak boleh diakses dari web (seeder bisa mereset database).
+RedirectMatch 404 /(tests|database|docs|vendor/bin|\.git|\.superpowers)(/|$)
+RedirectMatch 404 /(composer\.(json|lock)|prd_librani\.md|README\.md)$
