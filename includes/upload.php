@@ -49,7 +49,12 @@ function simpan_gambar(array $file, string $folder, int $maks_byte, array $mime_
     tulis_gambar($img, $mime, "$dir/$nama", $lebar);
     $thumb = null;
     if ($lebar_thumb) {
-        tulis_gambar($img, $mime, "$dir/thumb/$nama", $lebar_thumb);
+        try {
+            tulis_gambar($img, $mime, "$dir/thumb/$nama", $lebar_thumb);
+        } catch (Throwable $e) {
+            @unlink("$dir/$nama");   // jangan tinggalkan file utama tanpa thumbnail
+            throw $e;
+        }
         $thumb = $nama;
     }
     if (!empty($file['tes'])) {
@@ -61,7 +66,14 @@ function simpan_gambar(array $file, string $folder, int $maks_byte, array $mime_
 /** Tulis $img ke $path dalam format $mime, dikecilkan ke $lebar (tidak pernah diperbesar). */
 function tulis_gambar(GdImage $img, string $mime, string $path, ?int $lebar): void
 {
-    $out = ($lebar && imagesx($img) > $lebar) ? imagescale($img, $lebar, -1, IMG_BICUBIC) : $img;
+    $out = $img;
+    if ($lebar && imagesx($img) > $lebar) {
+        // imagecopyresampled, bukan imagescale(): imagescale() mengembalikan false di GD hosting (InfinityFree).
+        $tinggi = max(1, (int) round(imagesy($img) * $lebar / imagesx($img)));
+        $out = imagecreatetruecolor($lebar, $tinggi);
+        imagealphablending($out, false);
+        imagecopyresampled($out, $img, 0, 0, 0, 0, $lebar, $tinggi, imagesx($img), imagesy($img));
+    }
     if ($mime !== 'image/jpeg') {
         imagealphablending($out, false);
         imagesavealpha($out, true);
