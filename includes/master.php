@@ -284,3 +284,31 @@ function simpan_buku(array $in, ?array $file_cover, ?int $id = null): int
     }
     return $id;
 }
+
+/** Tandai eksemplar rusak/hilang manual, atau kembalikan ke tersedia. Tidak berlaku untuk eksemplar dalam transaksi. */
+function tandai_eksemplar(int $id, string $status): void
+{
+    if (!in_array($status, ['tersedia', 'rusak', 'hilang'], true)) {
+        throw new RuntimeException('Status hanya bisa diubah ke tersedia, rusak, atau hilang.');
+    }
+    $sekarang = db_val('SELECT status FROM eksemplar WHERE id = ?', [$id]);
+    if ($sekarang === false) {
+        throw new RuntimeException('Eksemplar tidak ditemukan.');
+    }
+    if (in_array($sekarang, ['dipinjam', 'direservasi'], true)) {
+        throw new RuntimeException('Eksemplar sedang dalam transaksi (dipinjam/direservasi).');
+    }
+    db()->prepare('UPDATE eksemplar SET status = ? WHERE id = ?')->execute([$status, $id]);
+}
+
+/** Hapus eksemplar yang belum pernah dipakai transaksi. */
+function hapus_eksemplar(int $id): void
+{
+    if (db_val('SELECT 1 FROM peminjaman_detail WHERE eksemplar_id = ? UNION SELECT 1 FROM reservasi WHERE eksemplar_id = ? LIMIT 1', [$id, $id])) {
+        throw new RuntimeException('Eksemplar punya riwayat transaksi; tandai rusak/hilang saja.');
+    }
+    if (in_array(db_val('SELECT status FROM eksemplar WHERE id = ?', [$id]), ['dipinjam', 'direservasi'], true)) {
+        throw new RuntimeException('Eksemplar sedang dalam transaksi.');
+    }
+    db()->prepare('DELETE FROM eksemplar WHERE id = ?')->execute([$id]);
+}

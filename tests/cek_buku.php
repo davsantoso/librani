@@ -41,3 +41,21 @@ cek('file baru ada', $baru !== $lama && is_file(UPLOAD_DIR . "/cover/$baru"));
 simpan_buku(data_buku(['hapus_cover' => '1']), null, $id);
 cek('hapus cover: kolom NULL dan file hilang', db_val('SELECT foto_cover FROM buku WHERE id = ?', [$id]) === null && !is_file(UPLOAD_DIR . "/cover/$baru"));
 harus_gagal('upload cover palsu ditolak', fn() => simpan_buku(data_buku(), fixture_file('x.jpg', '<?php')), 'Format');
+
+// ---- Eksemplar (Task 8)
+reset_db();
+$b = fx_buku(3);
+[$e1, $e2, $e3] = $b['eksemplar'];
+tandai_eksemplar($e1, 'rusak');
+sama('tersedia → rusak', 'rusak', db_val('SELECT status FROM eksemplar WHERE id = ?', [$e1]));
+tandai_eksemplar($e1, 'tersedia');
+sama('rusak → tersedia', 'tersedia', db_val('SELECT status FROM eksemplar WHERE id = ?', [$e1]));
+db()->prepare("UPDATE eksemplar SET status = 'dipinjam' WHERE id = ?")->execute([$e2]);
+harus_gagal('dipinjam → hilang ditolak', fn() => tandai_eksemplar($e2, 'hilang'), 'sedang dalam transaksi');
+harus_gagal('status tidak dikenal ditolak', fn() => tandai_eksemplar($e1, 'dipinjam'), 'Status');
+hapus_eksemplar($e3);
+sama('hapus eksemplar tanpa riwayat', 0, (int) db_val('SELECT COUNT(*) FROM eksemplar WHERE id = ?', [$e3]));
+$a = simpan_register(data_register(), null);
+$pj = insert('peminjaman', ['no_transaksi' => 'PJM-X', 'anggota_id' => $a, 'petugas_id' => 1, 'tgl_pinjam' => '2026-11-01', 'status' => 'selesai']);
+insert('peminjaman_detail', ['peminjaman_id' => $pj, 'eksemplar_id' => $e1, 'tgl_jatuh_tempo' => '2026-11-08', 'denda_per_hari' => 1000, 'status' => 'kembali']);
+harus_gagal('hapus eksemplar dengan riwayat ditolak', fn() => hapus_eksemplar($e1), 'riwayat');

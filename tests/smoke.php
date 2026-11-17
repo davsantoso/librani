@@ -51,6 +51,16 @@ foreach (['admin', 'petugas'] as $r) {
 }
 array_push($terlarang['anggota'], 'modules/master/buku/index.php', 'modules/master/buku/form.php');
 
+// --- Eksemplar (Task 8)
+foreach (['admin', 'petugas'] as $r) {
+    array_push($halaman[$r], 'modules/master/eksemplar/index.php', 'modules/master/eksemplar/index.php?status=tersedia&buku_id=1',
+        'modules/master/eksemplar/form.php', 'modules/master/eksemplar/form.php?buku_id=1', 'modules/master/eksemplar/form.php?id=1');
+}
+$kirim['petugas'][] = ['modules/master/eksemplar/form.php?buku_id=1', ['buku_id' => '1', 'jumlah' => '1', 'rak_id' => '', 'kondisi' => 'baik', 'sumber' => 'hibah', 'tgl_pengadaan' => date('Y-m-d')]];
+$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'status' => 'rusak'], 'modules/master/eksemplar/tandai.php'];
+$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'status' => 'tersedia'], 'modules/master/eksemplar/tandai.php'];
+$terlarang['anggota'][] = 'modules/master/eksemplar/index.php';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------
@@ -163,11 +173,14 @@ foreach ($akun as $role => [$u, $p]) {
         [$st] = minta($ch, $path);
         hasil($st === 403, "[$role] $path ditolak → $st");
     }
-    foreach ($kirim[$role] as [$path, $data]) {
-        [, $body] = minta($ch, $path);
-        [$st, $body, $loc] = minta($ch, $path, ['csrf' => token($body)] + $data);
+    // [halaman asal token, data, (opsional) tujuan POST bila berbeda dari halaman asal]
+    foreach ($kirim[$role] as $k) {
+        [$asal, $data] = $k;
+        $tujuan = $k[2] ?? $asal;
+        [, $body] = minta($ch, $asal);
+        [$st, $body] = minta($ch, $tujuan, ['csrf' => token($body)] + $data);
         $err = ada_error_php($body);
-        hasil($st === 302 && !$err, "[$role] POST $path → $st" . ($err ? " ($err)" : '') . ($st === 200 ? ' (validasi gagal?)' : ''));
+        hasil($st === 302 && !$err, "[$role] POST $tujuan → $st" . ($err ? " ($err)" : '') . ($st === 200 ? ' (validasi gagal?)' : ''));
     }
     // Logout lalu halaman terproteksi harus kembali ke login
     [, $body] = minta($ch, 'modules/dashboard/index.php');
