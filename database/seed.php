@@ -68,6 +68,12 @@ db()->prepare(
 $sari = (int) db()->lastInsertId();
 $eks_bumi = array_column(db_all('SELECT id FROM eksemplar WHERE buku_id = ? ORDER BY id', [$bumi]), 'id');
 $pj = simpan_peminjaman($sari, $eks_bumi, $petugas1, tambah_hari(hari_ini(), -20));
+// Buku ketiga (1 eksemplar) dipinjam Sari dan kini terlambat → bisa direservasi anggota lain.
+$ronggeng = simpan_buku([
+    'judul' => 'Ronggeng Dukuh Paruk', 'penulis' => 'Ahmad Tohari', 'kategori_id' => $kat,
+    'tahun_terbit' => '1982', 'harga' => '85000', 'jumlah_eksemplar' => 1, 'rak_id' => $rak,
+], null);
+simpan_peminjaman($sari, [(int) db_val('SELECT id FROM eksemplar WHERE buku_id = ?', [$ronggeng])], $petugas1, tambah_hari(hari_ini(), -14));
 proses_kembali(array_map(fn($d) => ['detail_id' => $d, 'kondisi' => 'baik'],
     array_column(db_all('SELECT id FROM peminjaman_detail WHERE peminjaman_id = ?', [$pj]), 'id')), $petugas1, tambah_hari(hari_ini(), -10));
 echo "Transaksi contoh dimuat.\n";

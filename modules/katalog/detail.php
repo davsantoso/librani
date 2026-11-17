@@ -1,6 +1,7 @@
 <?php
 // Detail buku untuk publik dan anggota: data buku + status eksemplar (tanpa info peminjam).
 require __DIR__ . '/../../includes/init.php';
+cek_reservasi_kadaluarsa();
 
 $id = (int) ($_GET['id'] ?? 0);
 $b = db_row(

@@ -303,6 +303,9 @@ function proses_kembali(array $items, int $petugas_id, ?string $tanggal = null):
             $db->prepare("UPDATE peminjaman_detail SET status = 'kembali' WHERE id = ?")->execute([$d['id']]);
             $status_eksemplar = ['baik' => 'tersedia', 'rusak' => 'rusak', 'hilang' => 'hilang'][$kondisi];
             $db->prepare('UPDATE eksemplar SET status = ? WHERE id = ?')->execute([$status_eksemplar, $d['eksemplar_id']]);
+            if ($kondisi === 'baik') {
+                alokasikan_reservasi((int) $d['eksemplar_id'], $tanggal);   // antrean reservasi → 'direservasi'
+            }
             $header[$d['peminjaman_id']] = true;
         }
         foreach (array_keys($header) as $pid) {

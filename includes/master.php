@@ -377,6 +377,9 @@ function tandai_eksemplar(int $id, string $status): void
         throw new RuntimeException('Eksemplar sedang dalam transaksi (dipinjam/direservasi).');
     }
     db()->prepare('UPDATE eksemplar SET status = ? WHERE id = ?')->execute([$status, $id]);
+    if ($status === 'tersedia') {
+        alokasikan_reservasi($id);   // eksemplar yang diperbaiki langsung untuk antrean reservasi
+    }
 }
 
 /** Hapus eksemplar yang belum pernah dipakai transaksi. */

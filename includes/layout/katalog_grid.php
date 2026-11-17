@@ -3,6 +3,7 @@
  * Grid katalog bergambar + form cari + paginasi. Dipakai /index.php (publik) dan modules/katalog/index.php (anggota).
  * Butuh: $aksi_form (URL halaman ini), $url_detail (URL detail tanpa id).
  */
+cek_reservasi_kadaluarsa();   // tidak ada cron di hosting gratis: cek saat halaman dibuka
 $q = trim((string) ($_GET['q'] ?? ''));
 $kategori_id = (int) ($_GET['kategori'] ?? 0) ?: null;
 $hal = max(1, (int) ($_GET['hal'] ?? 1));

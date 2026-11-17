@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../../../includes/init.php';
 require_role('petugas');
+cek_reservasi_kadaluarsa();
 
 $error = null;
 $awal = ['anggota' => (string) ($_GET['anggota'] ?? ''), 'eksemplar' => []];

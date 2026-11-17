@@ -98,9 +98,9 @@ array_push($halaman['admin'], 'modules/transaksi/peminjaman/index.php', 'modules
 $terlarang['admin'][] = 'modules/transaksi/peminjaman/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/peminjaman/index.php';
 
-// --- Pengembalian (Task 14): kembalikan detail 3 (detail pertama peminjaman di atas; 1-2 milik transaksi seeder).
+// --- Pengembalian (Task 14): kembalikan detail 4 (detail pertama peminjaman di atas; 1-3 milik transaksi seeder).
 $kmb = 'KMB-' . date('Ymd') . '-0001';
-$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['3' => '1'], 'kondisi' => ['3' => 'baik']]];
+$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['4' => '1'], 'kondisi' => ['4' => 'baik']]];
 array_push($halaman['petugas'], 'modules/transaksi/pengembalian/index.php', 'modules/transaksi/pengembalian/form.php',
     'modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', 'modules/transaksi/pengembalian/form.php?q=PJM-' . date('Ymd') . '-0001',
     'modules/transaksi/pengembalian/form.php?q=tidak-ada', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
@@ -141,12 +141,24 @@ array_push($halaman['admin'],
 $terlarang['anggota'][] = 'modules/laporan/index.php';
 $terlarang['anggota'][] = 'modules/laporan/denda.php?mode=cetak';
 
-// --- Perpanjangan (Task 18): anggota1 memperpanjang detail 4 (BK0001-03 dari peminjaman smoke).
-$kirim['anggota'][] = ['modules/anggota/pinjaman.php', ['detail_id' => '4'], 'modules/transaksi/perpanjangan/proses.php'];
+// --- Perpanjangan (Task 18): anggota1 memperpanjang detail 5 (BK0001-03 dari peminjaman smoke).
+$kirim['anggota'][] = ['modules/anggota/pinjaman.php', ['detail_id' => '5'], 'modules/transaksi/perpanjangan/proses.php'];
 $halaman['petugas'][] = 'modules/transaksi/perpanjangan/index.php';
 $halaman['admin'][] = 'modules/transaksi/perpanjangan/index.php';
 $terlarang['admin'][] = 'modules/transaksi/perpanjangan/proses.php';
 $terlarang['anggota'][] = 'modules/transaksi/perpanjangan/index.php';
+
+// --- Reservasi (Task 21): buku 3 (Ronggeng Dukuh Paruk) satu-satunya eksemplarnya dipinjam anggota2.
+array_push($kirim['anggota'],
+    ['modules/katalog/detail.php?id=3', ['buku_id' => '3'], 'modules/transaksi/reservasi/buat.php'],
+    ['modules/anggota/reservasi.php', ['id' => '1'], 'modules/transaksi/reservasi/batal.php'],
+    ['modules/katalog/detail.php?id=3', ['buku_id' => '3'], 'modules/transaksi/reservasi/buat.php']);
+array_push($halaman['anggota'], 'modules/anggota/reservasi.php', 'modules/katalog/detail.php?id=3');
+foreach (['admin', 'petugas'] as $r) {
+    array_push($halaman[$r], 'modules/transaksi/reservasi/index.php', 'modules/transaksi/reservasi/index.php?status=semua');
+}
+$terlarang['anggota'][] = 'modules/transaksi/reservasi/index.php';
+$terlarang['petugas'][] = 'modules/transaksi/reservasi/buat.php';
 
 // --- Barcode/QR (Task 20)
 foreach (['admin', 'petugas'] as $r) {

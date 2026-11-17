@@ -14,7 +14,7 @@ $data = db_all(
      WHERE p.anggota_id = ? ORDER BY d.status = 'dipinjam' DESC, p.tgl_pinjam DESC, d.id DESC",
     [$a['id']]
 );
-$bisa_perpanjang = function_exists('alasan_tidak_bisa_perpanjang');
+$bisa_perpanjang = true;
 
 $judul = 'Pinjaman Saya';
 require ROOT_DIR . '/includes/layout/header.php';

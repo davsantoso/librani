@@ -4,13 +4,11 @@ require_login();
 
 $role = user()['role'];
 $anggota = $role === 'anggota' ? anggota_saya() : null;
-if (function_exists('cek_reservasi_kadaluarsa')) {
-    cek_reservasi_kadaluarsa();
-}
+cek_reservasi_kadaluarsa();
 
 if ($role === 'anggota') {
     $r = $anggota && $anggota['status'] === 'aktif' ? ringkasan_anggota($anggota['id']) : null;
-    $reservasi = $r && function_exists('reservasi_anggota') ? reservasi_anggota($anggota['id']) : [];
+    $reservasi = $r ? reservasi_anggota($anggota['id']) : [];
 } else {
     $s = statistik_sirkulasi();
     $grafik = grafik_30_hari();
@@ -81,9 +79,7 @@ $link_kembali = fn(string $no) => user()['role'] === 'petugas'
                 </div>
             </div>
         </div>
-        <?php if (function_exists('reservasi_anggota')): ?>
-            <?php require ROOT_DIR . '/includes/layout/reservasi_anggota.php'; ?>
-        <?php endif; ?>
+        <?php require ROOT_DIR . '/includes/layout/reservasi_anggota.php'; ?>
     <?php endif; ?>
 
 <?php else: ?>

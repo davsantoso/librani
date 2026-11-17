@@ -18,6 +18,7 @@ require_once __DIR__ . '/nomor.php';
 require_once __DIR__ . '/master.php';
 require_once __DIR__ . '/katalog.php';
 require_once __DIR__ . '/sirkulasi.php';
+require_once __DIR__ . '/reservasi.php';
 require_once __DIR__ . '/dashboard.php';
 require_once __DIR__ . '/laporan.php';
 
