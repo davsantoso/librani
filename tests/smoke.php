@@ -120,6 +120,24 @@ $terlarang['anggota'][] = 'modules/transaksi/denda/index.php';
 $halaman['anggota'][] = 'modules/anggota/pinjaman.php';
 $terlarang['petugas'][] = 'modules/anggota/pinjaman.php';
 
+// --- Laporan (Task 17): 7 laporan x mode layar & cetak, dengan dan tanpa filter
+$daftar_laporan = ['peminjaman', 'pengembalian', 'denda', 'keterlambatan', 'populer', 'koleksi', 'anggota'];
+foreach (['admin', 'petugas'] as $r) {
+    $halaman[$r][] = 'modules/laporan/index.php';
+    foreach ($daftar_laporan as $l) {
+        array_push($halaman[$r], "modules/laporan/$l.php", "modules/laporan/$l.php?mode=cetak");
+    }
+}
+array_push($halaman['admin'],
+    'modules/laporan/peminjaman.php?dari=2026-01-01&sampai=2026-12-31&anggota_id=1&kategori_id=1&status=terlambat',
+    'modules/laporan/pengembalian.php?ketepatan=terlambat&dari=2026-01-01',
+    'modules/laporan/denda.php?status=lunas&anggota_id=2&mode=cetak',
+    'modules/laporan/keterlambatan.php?min_terlambat=3&kategori_id=1',
+    'modules/laporan/koleksi.php?status=dipinjam&rak_id=1',
+    'modules/laporan/anggota.php?periode_daftar=1&status=aktif&dari=x');
+$terlarang['anggota'][] = 'modules/laporan/index.php';
+$terlarang['anggota'][] = 'modules/laporan/denda.php?mode=cetak';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------
