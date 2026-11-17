@@ -8,7 +8,7 @@ body { background: #f4f6f9; }
 .sidebar .nav-link .bi { margin-right: .5rem; }
 .sidebar-grup { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.4); padding: .9rem 1rem .25rem; }
 .kartu-angka .angka { font-size: 1.6rem; font-weight: 600; }
-.auth-box { max-width: 440px; margin: 6vh auto; }
+.auth-box { max-width: 440px; margin: 6vh auto; padding: 0 1rem; }
 
 /* Sampul buku rasio 2:3 + placeholder berisi judul */
 .cover { aspect-ratio: 2 / 3; width: 100%; object-fit: cover; border-radius: .375rem; background: #e9ecef; display: block; }

@@ -1,0 +1,151 @@
+// ERD Librani — tempel di https://dbdiagram.io lalu Export → PNG ke docs/erd.png
+// 14 tabel: 7 master, 6 transaksi, 1 sistem.
+
+Table users {
+  id int [pk, increment]
+  nama varchar(100)
+  username varchar(50) [unique]
+  email varchar(100) [unique]
+  password_hash varchar(255)
+  role enum('admin','petugas','anggota')
+  is_active tinyint
+}
+
+Table anggota {
+  id int [pk, increment]
+  user_id int [unique, ref: - users.id]
+  kode_anggota varchar(20) [unique, note: 'AGT-2026-0001']
+  no_identitas varchar(30) [unique]
+  nama varchar(100)
+  jenis_kelamin enum('L','P')
+  tgl_lahir date
+  alamat text
+  no_hp varchar(20)
+  foto varchar(100)
+  status enum('menunggu','aktif','ditolak','nonaktif')
+  alasan_tolak varchar(255)
+  tgl_daftar date
+  tgl_berlaku date
+  verified_by int [ref: > users.id]
+}
+
+Table kategori {
+  id int [pk, increment]
+  kode varchar(10) [unique]
+  nama varchar(100)
+  deskripsi text
+  is_active tinyint
+}
+
+Table penerbit {
+  id int [pk, increment]
+  nama varchar(100)
+  kota varchar(50)
+  telepon varchar(20)
+  is_active tinyint
+}
+
+Table rak {
+  id int [pk, increment]
+  kode varchar(10) [unique]
+  nama varchar(100)
+  lantai tinyint
+  is_active tinyint
+}
+
+Table buku {
+  id int [pk, increment]
+  isbn varchar(20) [unique]
+  judul varchar(200)
+  penulis varchar(150)
+  penerbit_id int [ref: > penerbit.id]
+  kategori_id int [ref: > kategori.id]
+  tahun_terbit smallint
+  halaman smallint
+  sinopsis text
+  foto_cover varchar(100)
+  foto_thumb varchar(100)
+  harga int
+  is_active tinyint
+}
+
+Table eksemplar {
+  id int [pk, increment]
+  buku_id int [ref: > buku.id]
+  rak_id int [ref: > rak.id]
+  kode_eksemplar varchar(20) [unique, note: 'BK0001-01']
+  kondisi enum('baik','cukup','buruk')
+  status enum('tersedia','dipinjam','direservasi','rusak','hilang')
+  tgl_pengadaan date
+  sumber enum('beli','hibah')
+}
+
+Table peminjaman {
+  id int [pk, increment]
+  no_transaksi varchar(20) [unique, note: 'PJM-20261117-0001']
+  anggota_id int [ref: > anggota.id]
+  petugas_id int [ref: > users.id]
+  tgl_pinjam date
+  status enum('aktif','selesai')
+}
+
+Table peminjaman_detail {
+  id int [pk, increment]
+  peminjaman_id int [ref: > peminjaman.id]
+  eksemplar_id int [ref: > eksemplar.id]
+  tgl_jatuh_tempo date
+  jumlah_perpanjangan tinyint
+  denda_per_hari int [note: 'salinan aturan saat pinjam']
+  status enum('dipinjam','kembali')
+}
+
+Table pengembalian {
+  id int [pk, increment]
+  no_pengembalian varchar(20) [note: 'KMB-20261117-0001']
+  peminjaman_detail_id int [unique, ref: - peminjaman_detail.id]
+  tgl_kembali date
+  kondisi enum('baik','rusak','hilang')
+  hari_terlambat int
+  petugas_id int [ref: > users.id]
+  catatan varchar(255)
+}
+
+Table denda {
+  id int [pk, increment]
+  pengembalian_id int [ref: > pengembalian.id]
+  anggota_id int [ref: > anggota.id]
+  jenis enum('terlambat','rusak','hilang')
+  jumlah int
+  status enum('belum_lunas','lunas','dibebaskan')
+  tgl_bayar date
+  petugas_id int [ref: > users.id]
+  no_kuitansi varchar(20) [note: 'BYR-20261117-0001']
+  keterangan varchar(255)
+}
+
+Table perpanjangan {
+  id int [pk, increment]
+  peminjaman_detail_id int [ref: > peminjaman_detail.id]
+  jatuh_tempo_lama date
+  jatuh_tempo_baru date
+  tgl_perpanjangan date
+  diajukan_oleh int [ref: > users.id]
+}
+
+Table reservasi {
+  id int [pk, increment]
+  anggota_id int [ref: > anggota.id]
+  buku_id int [ref: > buku.id]
+  eksemplar_id int [ref: > eksemplar.id]
+  tgl_reservasi datetime
+  tgl_siap date
+  tgl_batas_ambil date
+  status enum('menunggu','siap','diambil','batal','kadaluarsa')
+}
+
+Table pengaturan {
+  id int [pk, increment]
+  kunci varchar(50) [unique]
+  nilai varchar(255)
+  keterangan varchar(255)
+}

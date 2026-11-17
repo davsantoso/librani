@@ -77,7 +77,10 @@ function cover_html(array $buku, string $ukuran = 'thumb'): string
     if ($file) {
         return '<img class="cover" loading="lazy" src="' . e(url($path . $file)) . '" alt="Sampul ' . e($buku['judul']) . '">';
     }
-    return '<div class="cover-placeholder" role="img" aria-label="Sampul ' . e($buku['judul']) . '"><span>' . e($buku['judul']) . '</span></div>';
+    // Warna placeholder diturunkan dari judul agar katalog tanpa foto tetap bervariasi (teks putih tetap kontras).
+    $hue = crc32((string) $buku['judul']) % 360;
+    $warna = "background:linear-gradient(135deg,hsl($hue 42% 38%),hsl(" . (($hue + 35) % 360) . ' 45% 22%))';
+    return '<div class="cover-placeholder" style="' . $warna . '" role="img" aria-label="Sampul ' . e($buku['judul']) . '"><span>' . e($buku['judul']) . '</span></div>';
 }
 
 /**

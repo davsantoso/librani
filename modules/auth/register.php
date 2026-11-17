@@ -45,7 +45,7 @@ $judul = 'Daftar Anggota';
 $tanpa_sidebar = true;
 require ROOT_DIR . '/includes/layout/header.php';
 ?>
-<div class="mx-auto my-4" style="max-width: 720px">
+<div class="mx-auto my-4 px-3" style="max-width: 752px">
     <div class="text-center mb-3">
         <a href="<?= url() ?>" class="text-decoration-none text-dark"><i class="bi bi-book-half text-primary display-6"></i></a>
         <h1 class="h4 mt-2">Daftar Anggota <?= e(setting('nama_perpustakaan')) ?></h1>

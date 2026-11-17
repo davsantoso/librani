@@ -41,4 +41,4 @@ $tanpa_sidebar ??= !user();
 <?php endif; ?>
 <div class="d-flex">
     <?php if (!$tanpa_sidebar) { require __DIR__ . '/sidebar.php'; } ?>
-    <main class="flex-grow-1 p-3 p-lg-4 min-w-0">
+    <main class="flex-grow-1 min-w-0 <?= $tanpa_sidebar ? '' : 'p-3 p-lg-4' ?>">
