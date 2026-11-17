@@ -2,11 +2,11 @@
 
 Aplikasi web perpustakaan umum/daerah untuk mengelola koleksi buku per eksemplar (lengkap dengan foto sampul), keanggotaan, peminjaman, pengembalian, denda, reservasi, dan laporan. Dibangun dengan **PHP native + MySQL** tanpa framework.
 
-- **Aplikasi online:** _(isi URL InfinityFree setelah deploy, misal https://librani.infinityfreeapp.com)_
+- **Aplikasi online:** https://librani.freedev.app
 - **Dokumen kebutuhan:** [prd_librani.md](prd_librani.md) · **Desain teknis:** [docs/superpowers/specs/2026-11-17-librani-design.md](docs/superpowers/specs/2026-11-17-librani-design.md)
-- **ERD:** [docs/erd.dbml](docs/erd.dbml) (tempel ke dbdiagram.io) → `docs/erd.png`
 
-![Katalog publik](docs/screenshot-katalog.png)
+
+![Katalog publik](docs/Screenshot-katalog.png)
 
 ## Pemenuhan ketentuan tugas
 
@@ -66,6 +66,8 @@ Anggota contoh lain memakai password `anggota123` (mis. `anggota2` punya denda &
 4. FileZilla → upload ke `htdocs/` semua file **kecuali** `.git/`, `tests/`, `docs/`, `.superpowers/`; **termasuk** `vendor/` dan `uploads/cover/` hasil seeder.
 5. Buat `config/config.php` di server: `APP_ENV` = `hosting`, `BASE_URL` = `https://<subdomain>`, host/nama/user/password database dari panel (host **bukan** `localhost`).
 6. Cek: halaman login lewat HTTPS, `https://<subdomain>/config/config.php` → 403.
+
+> Di hosting, error PHP tidak ditampilkan: pengguna melihat halaman "Terjadi kesalahan", detailnya dicatat di `config/error.log` (unduh lewat FileZilla; tidak bisa dibuka dari web).
 
 > Data contoh memakai tanggal relatif terhadap hari seeder dijalankan. Jalankan ulang langkah 2–3 sehari sebelum presentasi agar ada pinjaman yang "jatuh tempo hari ini" dan "terlambat".
 

@@ -9,6 +9,13 @@ function url(string $path = ''): string
     return BASE_URL . '/' . ltrim($path, '/');
 }
 
+/** URL file CSS/JS + ?v=<waktu ubah>, agar browser tidak memakai versi lama dari cache setelah file diperbarui. */
+function aset(string $path): string
+{
+    $file = ROOT_DIR . '/' . ltrim($path, '/');
+    return url($path) . (is_file($file) ? '?v=' . filemtime($file) : '');
+}
+
 function redirect(string $path): never
 {
     header('Location: ' . (str_starts_with($path, 'http') ? $path : url($path)));
@@ -77,10 +84,12 @@ function cover_html(array $buku, string $ukuran = 'thumb'): string
     if ($file) {
         return '<img class="cover" loading="lazy" src="' . e(url($path . $file)) . '" alt="Sampul ' . e($buku['judul']) . '">';
     }
-    // Warna placeholder diturunkan dari judul agar katalog tanpa foto tetap bervariasi (teks putih tetap kontras).
-    $hue = crc32((string) $buku['judul']) % 360;
-    $warna = "background:linear-gradient(135deg,hsl($hue 42% 38%),hsl(" . (($hue + 35) % 360) . ' 45% 22%))';
-    return '<div class="cover-placeholder" style="' . $warna . '" role="img" aria-label="Sampul ' . e($buku['judul']) . '"><span>' . e($buku['judul']) . '</span></div>';
+    // Warna sampul pengganti dipilih dari judul (palet tanah, semuanya kontras dengan teks putih) agar katalog tetap bervariasi.
+    $palet = ['#a3472b', '#3f6b3a', '#2f4858', '#8f5a12', '#7a2e2a', '#5f5e26', '#2f6f7e', '#5a3e2b', '#4a5560', '#4f6845'];
+    $warna = $palet[crc32((string) $buku['judul']) % count($palet)];
+    $penulis = ($buku['penulis'] ?? '') !== '' ? '<span class="cp-penulis">' . e($buku['penulis']) . '</span>' : '';
+    return '<div class="cover-placeholder" style="--c:' . $warna . '" role="img" aria-label="Sampul ' . e($buku['judul']) . '">'
+        . '<span class="cp-judul">' . e($buku['judul']) . '</span>' . $penulis . '</div>';
 }
 
 /**

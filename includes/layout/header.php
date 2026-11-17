@@ -8,10 +8,15 @@ $tanpa_sidebar ??= !user();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($judul ?? 'Librani') ?> · Librani</title>
+    <meta name="theme-color" content="#f6f1e7">
+    <!-- Font tema; tanpa internet jatuh ke Georgia/system-ui -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Nunito+Sans:opsz,wght@6..12,400..800&display=swap">
     <link rel="stylesheet" href="<?= url('assets/vendor/bootstrap.min.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/vendor/bootstrap-icons.min.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/vendor/dataTables.bootstrap5.min.css') ?>">
-    <link rel="stylesheet" href="<?= url('assets/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= aset('assets/css/app.css') ?>">
 </head>
 <body class="<?= $tanpa_sidebar ? 'polos' : 'dengan-sidebar' ?>">
 <?php if (user()): ?>

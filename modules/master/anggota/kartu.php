@@ -23,7 +23,7 @@ $qr = is_file(ROOT_DIR . '/assets/vendor/qrcode.min.js');
     <style>
         body { background: #eef1f5; }
         .kartu { width: 85.6mm; height: 54mm; border-radius: 3mm; overflow: hidden; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15); display: flex; flex-direction: column; }
-        .kartu-kepala { background: linear-gradient(135deg, #1d4e89, #3d5a80); color: #fff; padding: 2.2mm 3.5mm; font-size: 8pt; }
+        .kartu-kepala { background: linear-gradient(135deg, #a3472b, #74301c); color: #fff; padding: 2.2mm 3.5mm; font-size: 8pt; }
         .kartu-isi { display: flex; gap: 3mm; padding: 3mm 3.5mm; flex: 1; font-size: 7.5pt; }
         .foto { width: 18mm; height: 23mm; object-fit: cover; border-radius: 1mm; background: #e9ecef; }
         .kode { font-family: monospace; font-size: 10pt; font-weight: 700; letter-spacing: .5px; }

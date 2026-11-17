@@ -77,7 +77,7 @@
         dipilih.set(x.id, x);
         const sampul = x.thumb_url
             ? `<img class="cover" src="${esc(x.thumb_url)}" alt="">`
-            : `<div class="cover-placeholder"><span>${esc(x.judul)}</span></div>`;
+            : `<div class="cover-placeholder"><span class="cp-judul">${esc(x.judul)}</span></div>`;
         const kartu = document.createElement('div');
         kartu.className = 'border rounded p-2 d-flex gap-3 align-items-center';
         kartu.innerHTML = `

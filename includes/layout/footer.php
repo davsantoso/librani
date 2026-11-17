@@ -7,9 +7,9 @@
 <script src="<?= url('assets/vendor/dataTables.min.js') ?>"></script>
 <script src="<?= url('assets/vendor/dataTables.bootstrap5.min.js') ?>"></script>
 <script src="<?= url('assets/vendor/sweetalert2.all.min.js') ?>"></script>
-<script src="<?= url('assets/js/app.js') ?>"></script>
+<script src="<?= aset('assets/js/app.js') ?>"></script>
 <?php foreach ($js_tambahan ?? [] as $js): ?>
-<script src="<?= url($js) ?>"></script>
+<script src="<?= aset($js) ?>"></script>
 <?php endforeach; ?>
 </body>
 </html>

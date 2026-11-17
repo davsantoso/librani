@@ -13,7 +13,7 @@
             labels: data.map(d => label(d.tgl)),
             datasets: [{
                 label: 'Peminjaman', data: data.map(d => d.jumlah),
-                borderColor: warna, backgroundColor: warna, borderWidth: 2, tension: 0.25,
+                borderColor: warna, backgroundColor: warna + '1a', fill: true, borderWidth: 2, cubicInterpolationMode: 'monotone',  // monotone: kurva tidak turun di bawah 0
                 pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 12,
             }],
         },
@@ -25,8 +25,8 @@
                 tooltip: { callbacks: { label: c => `${c.parsed.y} transaksi` } },
             },
             scales: {
-                x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#6c757d' } },
-                y: { beginAtZero: true, ticks: { precision: 0, color: '#6c757d' }, grid: { color: 'rgba(0,0,0,.06)' }, border: { display: false } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#6a5f54' } },
+                y: { beginAtZero: true, ticks: { precision: 0, color: '#6a5f54' }, grid: { color: 'rgba(43,36,30,.07)' }, border: { display: false } },
             },
         },
     });
