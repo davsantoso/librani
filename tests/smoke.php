@@ -116,6 +116,10 @@ $halaman['anggota'][] = 'modules/anggota/denda.php';
 $terlarang['petugas'][] = 'modules/transaksi/denda/bebaskan.php';
 $terlarang['anggota'][] = 'modules/transaksi/denda/index.php';
 
+// --- Dashboard (Task 16): dashboard tiap role sudah dicek di atas; tambah halaman pinjaman anggota.
+$halaman['anggota'][] = 'modules/anggota/pinjaman.php';
+$terlarang['petugas'][] = 'modules/anggota/pinjaman.php';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------
