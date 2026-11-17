@@ -6,6 +6,8 @@ Aplikasi web perpustakaan umum/daerah untuk mengelola koleksi buku per eksemplar
 - **Dokumen kebutuhan:** [prd_librani.md](prd_librani.md) · **Desain teknis:** [docs/superpowers/specs/2026-11-17-librani-design.md](docs/superpowers/specs/2026-11-17-librani-design.md)
 - **ERD:** [docs/erd.dbml](docs/erd.dbml) (tempel ke dbdiagram.io) → `docs/erd.png`
 
+![Katalog publik](docs/screenshot-katalog.png)
+
 ## Pemenuhan ketentuan tugas
 
 | No | Ketentuan | Implementasi |
