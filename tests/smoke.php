@@ -1,12 +1,12 @@
 <?php
 // Smoke test HTTP: login per role, buka setiap halaman, pastikan tidak ada error PHP
-// dan role yang salah mendapat 403. Butuh Apache + database hasil `php database/seed.php`.
+// dan role yang salah mendapat 403. Jalankan tepat setelah `php database/seed.php` (form POST di sini menambah data).
 //   php tests/smoke.php
 require __DIR__ . '/../config/config.php';
 
 $akun = [
-    'admin' => ['admin', 'admin123'],
     'petugas' => ['petugas1', 'petugas123'],
+    'admin' => ['admin', 'admin123'],
     'anggota' => ['anggota1', 'anggota123'],
 ];
 
@@ -84,6 +84,16 @@ $halaman['admin'][] = 'modules/pengaturan/index.php';
 $terlarang['petugas'][] = 'modules/pengaturan/index.php';
 $terlarang['anggota'][] = 'modules/pengaturan/index.php';
 $kirim['admin'][] = ['modules/pengaturan/index.php', ['nilai' => ['denda_per_hari' => '1000', 'nama_perpustakaan' => 'Perpustakaan Umum Librani']]];
+
+// --- Peminjaman (Task 13). anggota1 = anggota id 1; eksemplar 2 & 3 = BK0001-02/03 dari seeder.
+$kirim['petugas'][] = ['modules/transaksi/peminjaman/form.php', ['anggota_id' => '1', 'eksemplar_ids' => ['2', '3']]];
+array_push($halaman['petugas'], 'modules/transaksi/peminjaman/index.php', 'modules/transaksi/peminjaman/index.php?status=terlambat',
+    'modules/transaksi/peminjaman/form.php', 'modules/transaksi/peminjaman/form.php?anggota=AGT-2026-0001',
+    'modules/transaksi/peminjaman/detail.php?id=1', 'modules/transaksi/peminjaman/bukti.php?id=1',
+    'modules/transaksi/peminjaman/cari_anggota.php?q=budi', 'modules/transaksi/peminjaman/cari_eksemplar.php?kode=bk0001-04&anggota_id=1');
+array_push($halaman['admin'], 'modules/transaksi/peminjaman/index.php', 'modules/transaksi/peminjaman/detail.php?id=1');
+$terlarang['admin'][] = 'modules/transaksi/peminjaman/form.php';
+$terlarang['anggota'][] = 'modules/transaksi/peminjaman/index.php';
 
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
@@ -192,13 +202,6 @@ hasil($st === 200 && str_contains($body, "Laskar Pelangi"), "[menunggu] katalog 
 foreach ($akun as $role => [$u, $p]) {
     $ch = sesi_baru();
     hasil(login($ch, $u, $p), "[$role] login $u");
-    foreach ($halaman[$role] as $path) {
-        cek_halaman($ch, $role, $path);
-    }
-    foreach ($terlarang[$role] as $path) {
-        [$st] = minta($ch, $path);
-        hasil($st === 403, "[$role] $path ditolak → $st");
-    }
     // [halaman asal token, data, (opsional) tujuan POST bila berbeda dari halaman asal]
     foreach ($kirim[$role] as $k) {
         [$asal, $data] = $k;
@@ -207,6 +210,13 @@ foreach ($akun as $role => [$u, $p]) {
         [$st, $body] = minta($ch, $tujuan, ['csrf' => token($body)] + $data);
         $err = ada_error_php($body);
         hasil($st === 302 && !$err, "[$role] POST $tujuan → $st" . ($err ? " ($err)" : '') . ($st === 200 ? ' (validasi gagal?)' : ''));
+    }
+    foreach ($halaman[$role] as $path) {
+        cek_halaman($ch, $role, $path);
+    }
+    foreach ($terlarang[$role] as $path) {
+        [$st] = minta($ch, $path);
+        hasil($st === 403, "[$role] $path ditolak → $st");
     }
     // Logout lalu halaman terproteksi harus kembali ke login
     [, $body] = minta($ch, 'modules/dashboard/index.php');

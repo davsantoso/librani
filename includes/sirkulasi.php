@@ -132,3 +132,74 @@ function ambil_reservasi_saat_pinjam(int $anggota_id, array $eksemplar_ids): voi
         $st->execute([$anggota_id, $eid]);
     }
 }
+
+// ===================== Pencarian untuk form transaksi =====================
+
+/** Anggota yang cocok dengan kode (persis) atau nama/kode (sebagian), beserta sisa kuota dan alasan tidak boleh pinjam. */
+function cari_anggota_pinjam(string $q, ?string $tanggal = null): array
+{
+    $q = trim($q);
+    if ($q === '') {
+        return [];
+    }
+    $like = '%' . addcslashes($q, '%_\\') . '%';
+    $rows = db_all(
+        "SELECT id, kode_anggota, nama, status, tgl_berlaku, foto FROM anggota
+         WHERE kode_anggota = ? OR kode_anggota LIKE ? OR nama LIKE ?
+         ORDER BY kode_anggota = ? DESC, nama LIMIT 10",
+        [strtoupper($q), $like, $like, strtoupper($q)]
+    );
+    $maks = (int) setting('maks_pinjam');
+    return array_map(fn($a) => $a + [
+        'sisa_kuota' => max(0, $maks - jumlah_pinjaman_aktif($a['id'])),
+        'maks_pinjam' => $maks,
+        'masalah' => syarat_pinjam($a['id'], $tanggal),
+    ], $rows);
+}
+
+/** Info eksemplar berdasarkan kode untuk form peminjaman; null jika kode tidak dikenal. */
+function info_eksemplar_pinjam(string $kode, int $anggota_id): ?array
+{
+    $x = db_row(
+        'SELECT e.id, e.kode_eksemplar, e.status, b.judul, b.penulis, b.foto_thumb
+         FROM eksemplar e JOIN buku b ON b.id = e.buku_id WHERE e.kode_eksemplar = ?',
+        [strtoupper(trim($kode))]
+    );
+    if (!$x) {
+        return null;
+    }
+    $boleh = eksemplar_boleh_dipinjam($x, $anggota_id);
+    return [
+        'id' => $x['id'],
+        'kode_eksemplar' => $x['kode_eksemplar'],
+        'judul' => $x['judul'],
+        'penulis' => $x['penulis'],
+        'thumb_url' => $x['foto_thumb'] ? url('uploads/cover/thumb/' . $x['foto_thumb']) : null,
+        'boleh' => $boleh,
+        'alasan' => $boleh ? '' : "Eksemplar sedang {$x['status']}.",
+    ];
+}
+
+/** Header peminjaman + daftar item (dengan buku, sampul, pengembalian). Dipakai halaman detail & bukti. */
+function data_peminjaman(int $id): ?array
+{
+    $p = db_row(
+        'SELECT p.*, a.nama AS anggota, a.kode_anggota, a.no_hp, u.nama AS petugas
+         FROM peminjaman p JOIN anggota a ON a.id = p.anggota_id JOIN users u ON u.id = p.petugas_id WHERE p.id = ?',
+        [$id]
+    );
+    if (!$p) {
+        return null;
+    }
+    $p['item'] = db_all(
+        'SELECT d.*, e.kode_eksemplar, b.judul, b.penulis, b.foto_thumb, b.foto_cover,
+                k.no_pengembalian, k.tgl_kembali, k.kondisi, k.hari_terlambat
+         FROM peminjaman_detail d
+         JOIN eksemplar e ON e.id = d.eksemplar_id
+         JOIN buku b ON b.id = e.buku_id
+         LEFT JOIN pengembalian k ON k.peminjaman_detail_id = d.id
+         WHERE d.peminjaman_id = ? ORDER BY d.id',
+        [$id]
+    );
+    return $p;
+}

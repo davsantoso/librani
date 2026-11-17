@@ -47,3 +47,28 @@ $det = insert('peminjaman_detail', ['peminjaman_id' => $pj, 'eksemplar_id' => $e
 $kmb = insert('pengembalian', ['no_pengembalian' => 'KMB-LAMA', 'peminjaman_detail_id' => $det, 'tgl_kembali' => '2026-10-11', 'hari_terlambat' => 3, 'petugas_id' => $p]);
 insert('denda', ['pengembalian_id' => $kmb, 'anggota_id' => $a5, 'jenis' => 'terlambat', 'jumlah' => 3000]);
 sama('denda belum lunas memblokir', ['Masih ada denda belum lunas (Rp3.000).'], syarat_pinjam($a5, '2026-11-17'));
+
+// ---- Pencarian untuk form peminjaman (Task 13)
+reset_db();
+$p = fx_petugas();
+$a = fx_anggota(['nama' => 'Rina Kartika']);
+$b = fx_buku(2, ['judul' => 'Ronggeng Dukuh Paruk']);
+simpan_peminjaman($a, [$b['eksemplar'][0]], $p, '2026-11-17');
+$kode = db_val('SELECT kode_anggota FROM anggota WHERE id = ?', [$a]);
+$ia = cari_anggota_pinjam($kode, '2026-11-17');
+sama('cari anggota lewat kode', 1, count($ia));
+sama('sisa kuota', 2, $ia[0]['sisa_kuota']);
+sama('tanpa masalah', [], $ia[0]['masalah']);
+sama('cari anggota lewat nama sebagian', $a, cari_anggota_pinjam('kartika', '2026-11-17')[0]['id']);
+cek('anggota terlambat punya masalah', in_array('Masih ada pinjaman terlambat.', cari_anggota_pinjam($kode, '2026-12-30')[0]['masalah'], true));
+
+$k1 = db_val('SELECT kode_eksemplar FROM eksemplar WHERE id = ?', [$b['eksemplar'][0]]);
+$k2 = db_val('SELECT kode_eksemplar FROM eksemplar WHERE id = ?', [$b['eksemplar'][1]]);
+$x = info_eksemplar_pinjam(strtolower($k2), $a);
+sama('eksemplar tersedia boleh (kode huruf kecil)', true, $x['boleh']);
+sama('judul ikut', 'Ronggeng Dukuh Paruk', $x['judul']);
+cek('placeholder: thumb_url null', $x['thumb_url'] === null);
+$y = info_eksemplar_pinjam($k1, $a);
+sama('eksemplar dipinjam tidak boleh', false, $y['boleh']);
+cek('alasan disebutkan', str_contains($y['alasan'], 'dipinjam'));
+cek('kode tidak dikenal → null', info_eksemplar_pinjam('BK9999-99', $a) === null);
