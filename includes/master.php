@@ -117,3 +117,49 @@ function hapus_atau_nonaktifkan(string $tabel, int $id, array $relasi): string
     db()->prepare("DELETE FROM $tabel WHERE id = ?")->execute([$id]);
     return 'dihapus';
 }
+
+// ===================== User petugas =====================
+
+/** Tambah ($id null) atau ubah user admin/petugas. Password opsional saat ubah. Melempar RuntimeException. */
+function simpan_user(array $in, ?int $id = null): int
+{
+    $v = fn(string $k) => trim((string) ($in[$k] ?? ''));
+    if ($id && !db_val("SELECT 1 FROM users WHERE id = ? AND role IN ('admin','petugas')", [$id])) {
+        throw new RuntimeException('User tidak ditemukan.');
+    }
+    if (!in_array($v('role'), ['admin', 'petugas'], true)) {
+        throw new RuntimeException('Role tidak valid.');
+    }
+    if ($v('nama') === '') {
+        throw new RuntimeException('Nama wajib diisi.');
+    }
+    if (!preg_match('/^[A-Za-z0-9_.]{3,50}$/', $v('username'))) {
+        throw new RuntimeException('Username 3–50 karakter: huruf, angka, titik, atau garis bawah.');
+    }
+    if (!filter_var($v('email'), FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException('Format email tidak valid.');
+    }
+    if (db_val('SELECT 1 FROM users WHERE username = ? AND id <> ?', [$v('username'), (int) $id])) {
+        throw new RuntimeException('Username sudah dipakai.');
+    }
+    if (db_val('SELECT 1 FROM users WHERE email = ? AND id <> ?', [$v('email'), (int) $id])) {
+        throw new RuntimeException('Email sudah dipakai.');
+    }
+    $password = (string) ($in['password'] ?? '');
+    if ((!$id || $password !== '') && strlen($password) < 8) {
+        throw new RuntimeException('Password minimal 8 karakter.');
+    }
+    $aktif = isset($in['is_active']) ? (int) (bool) $in['is_active'] : 1;
+
+    if ($id) {
+        db()->prepare('UPDATE users SET nama = ?, username = ?, email = ?, role = ?, is_active = ? WHERE id = ?')
+            ->execute([$v('nama'), $v('username'), $v('email'), $v('role'), $aktif, $id]);
+        if ($password !== '') {
+            db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
+        }
+        return $id;
+    }
+    db()->prepare('INSERT INTO users (nama, username, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?, ?)')
+        ->execute([$v('nama'), $v('username'), $v('email'), password_hash($password, PASSWORD_DEFAULT), $v('role'), $aktif]);
+    return (int) db()->lastInsertId();
+}

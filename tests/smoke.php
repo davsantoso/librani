@@ -40,6 +40,12 @@ $kirim['admin'][] = ['modules/master/kategori/form.php', ['kode' => "S$n", 'nama
 $kirim['admin'][] = ['modules/master/penerbit/form.php', ['nama' => "Penerbit Smoke $n", 'kota' => 'Surabaya', 'telepon' => '031-123456']];
 $kirim['admin'][] = ['modules/master/rak/form.php', ['kode' => "S$n", 'nama' => "Rak Smoke $n", 'lantai' => '1']];
 
+// --- User petugas (Task 6)
+array_push($halaman['admin'], 'modules/master/users/index.php', 'modules/master/users/form.php', 'modules/master/users/form.php?id=1');
+$terlarang['petugas'][] = 'modules/master/users/index.php';
+$terlarang['anggota'][] = 'modules/master/users/form.php';
+$kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
+
 // ---------------------------------------------------------------------------
 
 $ok = 0;
