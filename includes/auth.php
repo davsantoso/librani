@@ -53,3 +53,18 @@ function dashboard_url(string $role): string
 {
     return url('modules/dashboard/index.php');
 }
+
+/**
+ * Halaman milik anggota terverifikasi. Akun menunggu/ditolak dialihkan ke dashboard (yang menampilkan statusnya).
+ * Anggota aktif yang masa berlakunya habis tetap boleh melihat pinjaman & dendanya sendiri.
+ */
+function require_anggota_aktif(): array
+{
+    require_role('anggota');
+    $a = anggota_saya();
+    if (!$a || !in_array($a['status'], ['aktif', 'nonaktif'], true)) {
+        flash('gagal', 'Akun Anda belum aktif.');
+        redirect(dashboard_url('anggota'));
+    }
+    return $a;
+}

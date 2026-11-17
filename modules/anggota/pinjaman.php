@@ -1,8 +1,6 @@
 <?php
 require __DIR__ . '/../../includes/init.php';
-require_role('anggota');
-
-$a = anggota_saya();
+$a = require_anggota_aktif();
 $data = db_all(
     "SELECT d.id, d.tgl_jatuh_tempo, d.status, d.jumlah_perpanjangan, p.no_transaksi, p.tgl_pinjam,
             e.kode_eksemplar, b.judul, b.penulis, b.foto_thumb, b.foto_cover, k.tgl_kembali, k.hari_terlambat

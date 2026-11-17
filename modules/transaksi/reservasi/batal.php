@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../../../includes/init.php';
-require_role('anggota');
+require_anggota_aktif();
 
 if (is_post()) {
     csrf_check();

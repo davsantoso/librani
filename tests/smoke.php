@@ -304,6 +304,13 @@ hasil(login($ch, "smoke$n", "smoke12345"), "[menunggu] login anggota baru");
 hasil($st === 200 && str_contains($body, "menunggu verifikasi"), "[menunggu] dashboard menampilkan pesan menunggu verifikasi");
 [$st, $body] = minta($ch, "modules/katalog/index.php");
 hasil($st === 200 && str_contains($body, "Laskar Pelangi"), "[menunggu] katalog anggota tetap bisa dibuka");
+// FR-REG-03: akun menunggu hanya melihat pesan + katalog; halaman milik anggota aktif dialihkan ke dashboard.
+foreach (['modules/anggota/pinjaman.php', 'modules/anggota/denda.php', 'modules/anggota/reservasi.php'] as $p) {
+    [$st, , $loc] = minta($ch, $p);
+    hasil($st === 302 && str_contains($loc, 'dashboard'), "[menunggu] $p dialihkan ke dashboard → $st");
+}
+[, $body] = minta($ch, 'modules/dashboard/index.php');
+hasil(!str_contains($body, 'Pinjaman Saya'), '[menunggu] menu Pinjaman/Denda/Reservasi Saya disembunyikan');
 
 // Per role
 foreach ($akun as $role => [$u, $p]) {

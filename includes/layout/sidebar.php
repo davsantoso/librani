@@ -27,6 +27,11 @@ $menu = [
     ['Pengaturan', 'bi-gear', 'modules/pengaturan/index.php', ['admin']],
 ];
 $role = user()['role'];
+// Akun anggota yang belum terverifikasi hanya melihat Dashboard dan Katalog (FR-REG-03).
+$belum_aktif = $role === 'anggota' && !in_array(anggota_saya()['status'] ?? '', ['aktif', 'nonaktif'], true);
+if ($belum_aktif) {
+    $menu = array_values(array_filter($menu, fn($m) => is_array($m) && in_array($m[2], ['modules/dashboard/index.php', 'modules/katalog/index.php'], true)));
+}
 $sekarang = $_SERVER['SCRIPT_NAME'] ?? '';
 $grup = null;
 ?>

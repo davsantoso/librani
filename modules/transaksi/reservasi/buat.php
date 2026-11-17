@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../../../includes/init.php';
-require_role('anggota');
+require_anggota_aktif();
 
 $buku_id = (int) ($_POST['buku_id'] ?? 0);
 if (is_post()) {

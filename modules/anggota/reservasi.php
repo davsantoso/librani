@@ -1,9 +1,7 @@
 <?php
 require __DIR__ . '/../../includes/init.php';
-require_role('anggota');
-
+$a = require_anggota_aktif();
 cek_reservasi_kadaluarsa();
-$a = anggota_saya();
 $data = reservasi_anggota($a['id']);
 $label = ['menunggu' => ['info', 'Menunggu'], 'siap' => ['success', 'Siap diambil'], 'diambil' => ['secondary', 'Diambil'],
     'batal' => ['light', 'Dibatalkan'], 'kadaluarsa' => ['dark', 'Kadaluarsa']];
