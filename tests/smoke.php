@@ -138,6 +138,13 @@ array_push($halaman['admin'],
 $terlarang['anggota'][] = 'modules/laporan/index.php';
 $terlarang['anggota'][] = 'modules/laporan/denda.php?mode=cetak';
 
+// --- Perpanjangan (Task 18): anggota1 memperpanjang detail 4 (BK0001-03 dari peminjaman smoke).
+$kirim['anggota'][] = ['modules/anggota/pinjaman.php', ['detail_id' => '4'], 'modules/transaksi/perpanjangan/proses.php'];
+$halaman['petugas'][] = 'modules/transaksi/perpanjangan/index.php';
+$halaman['admin'][] = 'modules/transaksi/perpanjangan/index.php';
+$terlarang['admin'][] = 'modules/transaksi/perpanjangan/proses.php';
+$terlarang['anggota'][] = 'modules/transaksi/perpanjangan/index.php';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------

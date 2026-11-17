@@ -398,3 +398,67 @@ function bebaskan_denda(int $denda_id, int $admin_id, string $alasan): void
         throw new RuntimeException('Hanya denda yang belum lunas yang bisa dibebaskan.');
     }
 }
+
+// ===================== Perpanjangan (P1) =====================
+
+/** Alasan detail pinjaman tidak bisa diperpanjang oleh $user_id pada $tanggal; null jika bisa. */
+function alasan_tidak_bisa_perpanjang(int $detail_id, int $user_id, ?string $tanggal = null): ?string
+{
+    $tanggal ??= hari_ini();
+    $d = db_row(
+        'SELECT d.*, p.anggota_id, a.user_id AS user_anggota, e.buku_id
+         FROM peminjaman_detail d JOIN peminjaman p ON p.id = d.peminjaman_id
+         JOIN anggota a ON a.id = p.anggota_id JOIN eksemplar e ON e.id = d.eksemplar_id WHERE d.id = ?',
+        [$detail_id]
+    );
+    if (!$d) {
+        return 'Data pinjaman tidak ditemukan.';
+    }
+    $role = db_val('SELECT role FROM users WHERE id = ?', [$user_id]);
+    if ($role === 'anggota' && (int) $d['user_anggota'] !== $user_id) {
+        return 'Bukan pinjaman Anda.';
+    }
+    if ($d['status'] !== 'dipinjam') {
+        return 'Pinjaman sudah dikembalikan.';
+    }
+    if ($d['tgl_jatuh_tempo'] < $tanggal) {
+        return 'Sudah terlambat, tidak bisa diperpanjang.';
+    }
+    $maks = (int) setting('maks_perpanjangan');
+    if ((int) $d['jumlah_perpanjangan'] >= $maks) {
+        return "Sudah mencapai batas perpanjangan ($maks kali).";
+    }
+    $masalah = syarat_pinjam((int) $d['anggota_id'], $tanggal);
+    if ($masalah) {
+        return $masalah[0];
+    }
+    if (db_val("SELECT 1 FROM reservasi WHERE buku_id = ? AND anggota_id <> ? AND status = 'menunggu' LIMIT 1", [$d['buku_id'], $d['anggota_id']])) {
+        return 'Judul ini sedang direservasi anggota lain.';
+    }
+    return null;
+}
+
+/** Perpanjang jatuh tempo satu eksemplar. @return string jatuh tempo baru */
+function perpanjang(int $detail_id, int $user_id, ?string $tanggal = null): string
+{
+    $db = db();
+    $db->beginTransaction();
+    try {
+        db_val('SELECT id FROM peminjaman_detail WHERE id = ? FOR UPDATE', [$detail_id]);
+        $alasan = alasan_tidak_bisa_perpanjang($detail_id, $user_id, $tanggal);
+        if ($alasan) {
+            throw new RuntimeException($alasan);
+        }
+        $lama = (string) db_val('SELECT tgl_jatuh_tempo FROM peminjaman_detail WHERE id = ?', [$detail_id]);
+        $baru = tambah_hari($lama, (int) setting('lama_perpanjangan'));
+        $db->prepare('UPDATE peminjaman_detail SET tgl_jatuh_tempo = ?, jumlah_perpanjangan = jumlah_perpanjangan + 1 WHERE id = ?')
+            ->execute([$baru, $detail_id]);
+        $db->prepare('INSERT INTO perpanjangan (peminjaman_detail_id, jatuh_tempo_lama, jatuh_tempo_baru, tgl_perpanjangan, diajukan_oleh) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$detail_id, $lama, $baru, $tanggal ?? hari_ini(), $user_id]);
+        $db->commit();
+        return $baru;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
