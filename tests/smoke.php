@@ -4,6 +4,31 @@
 //   php tests/smoke.php
 require __DIR__ . '/../config/config.php';
 
+// Seeder membuat transaksi acak, jadi ID data contoh dibaca dari database, bukan ditulis tetap.
+// Data POST / URL berupa Closure dievaluasi tepat sebelum dipakai (setelah langkah sebelumnya selesai).
+$pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4', DB_USER, DB_PASS);
+function q(string $sql, array $p = []): mixed
+{
+    $st = $GLOBALS['pdo']->prepare($sql);
+    $st->execute($p);
+    return $st->fetchColumn();
+}
+function q_kolom(string $sql, array $p = []): array
+{
+    $st = $GLOBALS['pdo']->prepare($sql);
+    $st->execute($p);
+    return $st->fetchAll(PDO::FETCH_COLUMN);
+}
+$id_budi = (int) q("SELECT id FROM anggota WHERE kode_anggota = 'AGT-2026-0001'");
+$eks_lp = q_kolom("SELECT id FROM eksemplar WHERE buku_id = 1 AND status = 'tersedia' ORDER BY id");   // Laskar Pelangi
+$denda_sari = q_kolom("SELECT dn.id FROM denda dn JOIN anggota a ON a.id = dn.anggota_id
+                       WHERE a.kode_anggota = 'AGT-2026-0002' AND dn.status = 'belum_lunas' ORDER BY dn.id");
+if (!$id_budi || count($eks_lp) < 3 || count($denda_sari) < 2) {
+    exit("Data contoh tidak sesuai. Jalankan dulu: php database/seed.php\n");
+}
+$pinjaman_budi = fn(string $kolom) => q("SELECT MAX($kolom) FROM peminjaman_detail d JOIN peminjaman p ON p.id = d.peminjaman_id
+                                         WHERE p.anggota_id = ? AND d.status = 'dipinjam'", [$id_budi]);
+
 $akun = [
     'petugas' => ['petugas1', 'petugas123'],
     'admin' => ['admin', 'admin123'],
@@ -60,8 +85,8 @@ foreach (['admin', 'petugas'] as $r) {
         'modules/master/eksemplar/form.php', 'modules/master/eksemplar/form.php?buku_id=1', 'modules/master/eksemplar/form.php?id=1');
 }
 $kirim['petugas'][] = ['modules/master/eksemplar/form.php?buku_id=1', ['buku_id' => '1', 'jumlah' => '1', 'rak_id' => '', 'kondisi' => 'baik', 'sumber' => 'hibah', 'tgl_pengadaan' => date('Y-m-d')]];
-$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'status' => 'rusak'], 'modules/master/eksemplar/tandai.php'];
-$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'status' => 'tersedia'], 'modules/master/eksemplar/tandai.php'];
+$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => $eks_lp[0], 'status' => 'rusak'], 'modules/master/eksemplar/tandai.php'];
+$kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => $eks_lp[0], 'status' => 'tersedia'], 'modules/master/eksemplar/tandai.php'];
 $terlarang['anggota'][] = 'modules/master/eksemplar/index.php';
 
 // --- Anggota (Task 9)
@@ -88,33 +113,37 @@ $terlarang['petugas'][] = 'modules/pengaturan/index.php';
 $terlarang['anggota'][] = 'modules/pengaturan/index.php';
 $kirim['admin'][] = ['modules/pengaturan/index.php', ['nilai' => ['denda_per_hari' => '1000', 'nama_perpustakaan' => 'Perpustakaan Umum Librani']]];
 
-// --- Peminjaman (Task 13). anggota1 = anggota id 1; eksemplar 2 & 3 = BK0001-02/03 dari seeder.
-$kirim['petugas'][] = ['modules/transaksi/peminjaman/form.php', ['anggota_id' => '1', 'eksemplar_ids' => ['2', '3']]];
+// --- Peminjaman (Task 13): Budi (anggota1) meminjam 2 eksemplar Laskar Pelangi.
+$kirim['petugas'][] = ['modules/transaksi/peminjaman/form.php', ['anggota_id' => $id_budi, 'eksemplar_ids' => [$eks_lp[1], $eks_lp[2]]]];
 array_push($halaman['petugas'], 'modules/transaksi/peminjaman/index.php', 'modules/transaksi/peminjaman/index.php?status=terlambat',
     'modules/transaksi/peminjaman/form.php', 'modules/transaksi/peminjaman/form.php?anggota=AGT-2026-0001',
     'modules/transaksi/peminjaman/detail.php?id=1', 'modules/transaksi/peminjaman/bukti.php?id=1',
-    'modules/transaksi/peminjaman/cari_anggota.php?q=budi', 'modules/transaksi/peminjaman/cari_eksemplar.php?kode=bk0001-04&anggota_id=1');
+    'modules/transaksi/peminjaman/cari_anggota.php?q=budi', "modules/transaksi/peminjaman/cari_eksemplar.php?kode=bk0001-04&anggota_id=$id_budi");
 array_push($halaman['admin'], 'modules/transaksi/peminjaman/index.php', 'modules/transaksi/peminjaman/detail.php?id=1');
 $terlarang['admin'][] = 'modules/transaksi/peminjaman/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/peminjaman/index.php';
 
-// --- Pengembalian (Task 14): kembalikan detail 4 (detail pertama peminjaman di atas; 1-3 milik transaksi seeder).
-$kmb = 'KMB-' . date('Ymd') . '-0001';
-$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['4' => '1'], 'kondisi' => ['4' => 'baik']]];
+// --- Pengembalian (Task 14): kembalikan eksemplar pertama dari peminjaman Budi di atas.
+$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', function () use ($pinjaman_budi) {
+    $d = q('SELECT MIN(d.id) FROM peminjaman_detail d WHERE d.peminjaman_id = ?', [q('SELECT MAX(peminjaman_id) FROM peminjaman_detail WHERE id = ?', [$pinjaman_budi('d.id')])]);
+    return ['q' => 'AGT-2026-0001', 'kembali' => [$d => '1'], 'kondisi' => [$d => 'baik']];
+}];
+$bukti_kmb = fn() => 'modules/transaksi/pengembalian/bukti.php?no=' . q('SELECT MAX(no_pengembalian) FROM pengembalian');
 array_push($halaman['petugas'], 'modules/transaksi/pengembalian/index.php', 'modules/transaksi/pengembalian/form.php',
-    'modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', 'modules/transaksi/pengembalian/form.php?q=PJM-' . date('Ymd') . '-0001',
-    'modules/transaksi/pengembalian/form.php?q=tidak-ada', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
-array_push($halaman['admin'], 'modules/transaksi/pengembalian/index.php', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
+    'modules/transaksi/pengembalian/form.php?q=AGT-2026-0001',
+    fn() => 'modules/transaksi/pengembalian/form.php?q=' . q('SELECT MAX(no_transaksi) FROM peminjaman WHERE anggota_id = ?', [$id_budi]),
+    'modules/transaksi/pengembalian/form.php?q=tidak-ada', $bukti_kmb);
+array_push($halaman['admin'], 'modules/transaksi/pengembalian/index.php', $bukti_kmb);
 $terlarang['admin'][] = 'modules/transaksi/pengembalian/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/pengembalian/index.php';
 
-// --- Denda (Task 15): seeder membuat 2 denda (id 1 & 2) untuk anggota2 / AGT-2026-0002.
-$byr = 'BYR-' . date('Ymd') . '-0001';
-$kirim['petugas'][] = ['modules/transaksi/denda/index.php?anggota=AGT-2026-0002', ['anggota' => 'AGT-2026-0002', 'denda_ids' => ['1']], 'modules/transaksi/denda/bayar.php'];
-$kirim['admin'][] = ['modules/transaksi/denda/index.php', ['id' => '2', 'alasan' => 'Uji smoke'], 'modules/transaksi/denda/bebaskan.php'];
+// --- Denda (Task 15): seeder membuat 2 denda belum lunas untuk Sari (AGT-2026-0002); satu dibayar, satu dibebaskan.
+$kirim['petugas'][] = ['modules/transaksi/denda/index.php?anggota=AGT-2026-0002', ['anggota' => 'AGT-2026-0002', 'denda_ids' => [$denda_sari[0]]], 'modules/transaksi/denda/bayar.php'];
+$kirim['admin'][] = ['modules/transaksi/denda/index.php', ['id' => $denda_sari[1], 'alasan' => 'Uji smoke'], 'modules/transaksi/denda/bebaskan.php'];
+$kuitansi = fn() => 'modules/transaksi/denda/kuitansi.php?no=' . q('SELECT no_kuitansi FROM denda WHERE id = ?', [$denda_sari[0]]);
 array_push($halaman['petugas'], 'modules/transaksi/denda/index.php', 'modules/transaksi/denda/index.php?status=semua',
-    'modules/transaksi/denda/index.php?anggota=AGT-2026-0002', 'modules/transaksi/denda/index.php?anggota=TIDAK-ADA', "modules/transaksi/denda/kuitansi.php?no=$byr");
-array_push($halaman['admin'], 'modules/transaksi/denda/index.php?status=dibebaskan', "modules/transaksi/denda/kuitansi.php?no=$byr");
+    'modules/transaksi/denda/index.php?anggota=AGT-2026-0002', 'modules/transaksi/denda/index.php?anggota=TIDAK-ADA', $kuitansi);
+array_push($halaman['admin'], 'modules/transaksi/denda/index.php?status=dibebaskan', $kuitansi);
 $halaman['anggota'][] = 'modules/anggota/denda.php';
 $terlarang['petugas'][] = 'modules/transaksi/denda/bebaskan.php';
 $terlarang['anggota'][] = 'modules/transaksi/denda/index.php';
@@ -141,8 +170,8 @@ array_push($halaman['admin'],
 $terlarang['anggota'][] = 'modules/laporan/index.php';
 $terlarang['anggota'][] = 'modules/laporan/denda.php?mode=cetak';
 
-// --- Perpanjangan (Task 18): anggota1 memperpanjang detail 5 (BK0001-03 dari peminjaman smoke).
-$kirim['anggota'][] = ['modules/anggota/pinjaman.php', ['detail_id' => '5'], 'modules/transaksi/perpanjangan/proses.php'];
+// --- Perpanjangan (Task 18): Budi memperpanjang eksemplar yang masih dipinjam dari transaksi smoke.
+$kirim['anggota'][] = ['modules/anggota/pinjaman.php', fn() => ['detail_id' => $pinjaman_budi('d.id')], 'modules/transaksi/perpanjangan/proses.php'];
 $halaman['petugas'][] = 'modules/transaksi/perpanjangan/index.php';
 $halaman['admin'][] = 'modules/transaksi/perpanjangan/index.php';
 $terlarang['admin'][] = 'modules/transaksi/perpanjangan/proses.php';
@@ -151,7 +180,7 @@ $terlarang['anggota'][] = 'modules/transaksi/perpanjangan/index.php';
 // --- Reservasi (Task 21): buku 3 (Ronggeng Dukuh Paruk) satu-satunya eksemplarnya dipinjam anggota2.
 array_push($kirim['anggota'],
     ['modules/katalog/detail.php?id=3', ['buku_id' => '3'], 'modules/transaksi/reservasi/buat.php'],
-    ['modules/anggota/reservasi.php', ['id' => '1'], 'modules/transaksi/reservasi/batal.php'],
+    ['modules/anggota/reservasi.php', fn() => ['id' => q('SELECT MAX(id) FROM reservasi WHERE anggota_id = ?', [$id_budi])], 'modules/transaksi/reservasi/batal.php'],
     ['modules/katalog/detail.php?id=3', ['buku_id' => '3'], 'modules/transaksi/reservasi/buat.php']);
 array_push($halaman['anggota'], 'modules/anggota/reservasi.php', 'modules/katalog/detail.php?id=3');
 foreach (['admin', 'petugas'] as $r) {
@@ -283,6 +312,7 @@ foreach ($akun as $role => [$u, $p]) {
     // [halaman asal token, data, (opsional) tujuan POST bila berbeda dari halaman asal]
     foreach ($kirim[$role] as $k) {
         [$asal, $data] = $k;
+        $data = $data instanceof Closure ? $data() : $data;
         $tujuan = $k[2] ?? $asal;
         [, $body] = minta($ch, $asal);
         [$st, $body] = minta($ch, $tujuan, ['csrf' => token($body)] + $data);
@@ -290,7 +320,7 @@ foreach ($akun as $role => [$u, $p]) {
         hasil($st === 302 && !$err, "[$role] POST $tujuan → $st" . ($err ? " ($err)" : '') . ($st === 200 ? ' (validasi gagal?)' : ''));
     }
     foreach ($halaman[$role] as $path) {
-        cek_halaman($ch, $role, $path);
+        cek_halaman($ch, $role, $path instanceof Closure ? $path() : $path);
     }
     foreach ($pdf[$role] as $path) {
         [$st, $body] = minta($ch, $path);
