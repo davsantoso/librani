@@ -309,7 +309,9 @@ function tabel_laporan(array $blok, string $kelas): string
     foreach ($blok['baris'] as $b) {
         $h .= '<tr>';
         foreach ($blok['kolom'] as $i => [, $fmt]) {
-            $h .= '<td' . $kanan($fmt) . ($fmt === 'tgl' ? ' data-order="' . e((string) $b[$i]) . '"' : '') . '>' . format_sel($b[$i], $fmt) . '</td>';
+            // data-t/data-v: nilai mentah untuk export Excel (SheetJS), data-order: urutan tanggal di tabel
+            $mentah = in_array($fmt, ['rupiah', 'angka'], true) ? ' data-t="n" data-v="' . (int) $b[$i] . '"' : '';
+            $h .= '<td' . $kanan($fmt) . $mentah . ($fmt === 'tgl' ? ' data-order="' . e((string) $b[$i]) . '"' : '') . '>' . format_sel($b[$i], $fmt) . '</td>';
         }
         $h .= '</tr>';
     }
@@ -454,4 +456,32 @@ function form_filter_laporan(array $f, array $ui): void
         echo '<div class="col-md-2"><label class="form-label small" for="min_terlambat">Terlambat minimal (hari)</label><input class="form-control" type="number" min="0" id="min_terlambat" name="min_terlambat" value="' . (int) $f['min_terlambat'] . '"></div>';
     }
     echo '<div class="col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Tampilkan</button></div></div></form>';
+}
+
+// ===================== Export PDF (P1) =====================
+// Hanya tersedia jika Dompdf terpasang (composer install). Tanpa vendor/, tombol PDF disembunyikan.
+if (is_file(ROOT_DIR . '/vendor/autoload.php')) {
+    function laporan_pdf(string $judul, string $sub_judul, string $isi_tabel, bool $landscape): void
+    {
+        require_once ROOT_DIR . '/vendor/autoload.php';
+        $html = '<!doctype html><html><head><meta charset="utf-8"><style>
+            body { font-family: DejaVu Sans, sans-serif; font-size: 8.5pt; color: #000; }
+            .kop { border-bottom: 3px double #000; padding-bottom: 4px; margin-bottom: 10px; }
+            .kop h1 { font-size: 13pt; margin: 0; } .kanan { float: right; text-align: right; font-size: 8pt; }
+            h2 { font-size: 11pt; text-align: center; margin: 4px 0 0; } .sub { text-align: center; margin: 0 0 10px; }
+            table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #555; padding: 3px 4px; vertical-align: top; }
+            th { background: #eee; } tfoot td { font-weight: bold; background: #f5f5f5; } .text-end { text-align: right; }
+            .text-center { text-align: center; } .text-muted { color: #666; }
+        </style></head><body>'
+            . '<div class="kop"><div class="kanan">Dicetak: ' . e(tgl(hari_ini()) . ' ' . date('H:i')) . '<br>Oleh: ' . e(user()['nama'] ?? '-') . '</div>'
+            . '<h1>' . e(setting('nama_perpustakaan')) . '</h1><div>' . e(setting('alamat_perpustakaan')) . '</div></div>'
+            . '<h2>' . e(strtoupper($judul)) . '</h2><p class="sub">' . e($sub_judul) . '</p>'
+            . $isi_tabel . '</body></html>';
+        $pdf = new Dompdf\Dompdf(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false]);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper('A4', $landscape ? 'landscape' : 'portrait');
+        $pdf->render();
+        $nama = preg_replace('/[^a-z0-9]+/', '-', strtolower($judul)) . '-' . date('Ymd') . '.pdf';
+        $pdf->stream($nama, ['Attachment' => true]);
+    }
 }

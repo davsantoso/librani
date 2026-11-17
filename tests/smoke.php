@@ -28,6 +28,9 @@ $terlarang = [
 // Form POST yang harus berhasil (302, tanpa error) per role: [halaman form, data].
 $kirim = ['admin' => [], 'petugas' => [], 'anggota' => []];
 
+// Halaman yang harus menghasilkan file PDF (status 200, isi diawali %PDF).
+$pdf = ['admin' => [], 'petugas' => [], 'anggota' => []];
+
 // --- Master kategori, penerbit, rak (Task 5)
 $n = substr((string) time(), -5);
 foreach (['kategori', 'penerbit', 'rak'] as $m) {
@@ -144,6 +147,13 @@ $halaman['petugas'][] = 'modules/transaksi/perpanjangan/index.php';
 $halaman['admin'][] = 'modules/transaksi/perpanjangan/index.php';
 $terlarang['admin'][] = 'modules/transaksi/perpanjangan/proses.php';
 $terlarang['anggota'][] = 'modules/transaksi/perpanjangan/index.php';
+
+// --- Export PDF (Task 19): semua laporan, admin & petugas
+foreach (['admin', 'petugas'] as $r) {
+    foreach ($daftar_laporan as $l) {
+        $pdf[$r][] = "modules/laporan/$l.php?mode=pdf&dari=2026-01-01&sampai=2026-12-31";
+    }
+}
 
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
@@ -263,6 +273,10 @@ foreach ($akun as $role => [$u, $p]) {
     }
     foreach ($halaman[$role] as $path) {
         cek_halaman($ch, $role, $path);
+    }
+    foreach ($pdf[$role] as $path) {
+        [$st, $body] = minta($ch, $path);
+        hasil($st === 200 && str_starts_with($body, '%PDF'), "[$role] PDF $path → $st" . (str_starts_with($body, '%PDF') ? '' : ' (bukan PDF)'));
     }
     foreach ($terlarang[$role] as $path) {
         [$st] = minta($ch, $path);
