@@ -95,6 +95,16 @@ array_push($halaman['admin'], 'modules/transaksi/peminjaman/index.php', 'modules
 $terlarang['admin'][] = 'modules/transaksi/peminjaman/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/peminjaman/index.php';
 
+// --- Pengembalian (Task 14): kembalikan detail 1 dari peminjaman di atas.
+$kmb = 'KMB-' . date('Ymd') . '-0001';
+$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['1' => '1'], 'kondisi' => ['1' => 'baik']]];
+array_push($halaman['petugas'], 'modules/transaksi/pengembalian/index.php', 'modules/transaksi/pengembalian/form.php',
+    'modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', 'modules/transaksi/pengembalian/form.php?q=PJM-' . date('Ymd') . '-0001',
+    'modules/transaksi/pengembalian/form.php?q=tidak-ada', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
+array_push($halaman['admin'], 'modules/transaksi/pengembalian/index.php', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
+$terlarang['admin'][] = 'modules/transaksi/pengembalian/form.php';
+$terlarang['anggota'][] = 'modules/transaksi/pengembalian/index.php';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------

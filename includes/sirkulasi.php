@@ -203,3 +203,144 @@ function data_peminjaman(int $id): ?array
     );
     return $p;
 }
+
+// ===================== Pengembalian =====================
+
+/** Hari terlambat (hari kalender) dan denda = max(0, kembali - jatuh tempo) x denda per hari. */
+function hitung_denda_terlambat(string $jatuh_tempo, string $tgl_kembali, int $denda_per_hari): array
+{
+    $hari = max(0, (int) (new DateTime($jatuh_tempo))->diff(new DateTime($tgl_kembali))->format('%r%a'));
+    return ['hari' => $hari, 'denda' => $hari * $denda_per_hari];
+}
+
+/** Denda rusak/hilang dari harga buku sesuai persen pengaturan (0 jika harga kosong). */
+function denda_kondisi(string $kondisi, int $harga): int
+{
+    if ($kondisi === 'baik' || $harga <= 0) {
+        return 0;
+    }
+    $persen = (int) setting($kondisi === 'rusak' ? 'denda_rusak_persen' : 'denda_hilang_persen');
+    return (int) round($harga * $persen / 100);
+}
+
+/** Perkiraan denda sebelum disimpan, per detail peminjaman yang masih dipinjam. */
+function pratinjau_kembali(array $detail_ids, ?string $tanggal = null): array
+{
+    $tanggal ??= hari_ini();
+    $hasil = [];
+    foreach (array_map('intval', $detail_ids) as $id) {
+        $d = db_row(
+            "SELECT d.id, d.tgl_jatuh_tempo, d.denda_per_hari, e.kode_eksemplar, b.judul, b.harga
+             FROM peminjaman_detail d JOIN eksemplar e ON e.id = d.eksemplar_id JOIN buku b ON b.id = e.buku_id
+             WHERE d.id = ? AND d.status = 'dipinjam'",
+            [$id]
+        );
+        if (!$d) {
+            continue;
+        }
+        $t = hitung_denda_terlambat($d['tgl_jatuh_tempo'], $tanggal, (int) $d['denda_per_hari']);
+        $hasil[] = [
+            'detail_id' => $d['id'], 'kode_eksemplar' => $d['kode_eksemplar'], 'judul' => $d['judul'],
+            'tgl_jatuh_tempo' => $d['tgl_jatuh_tempo'], 'hari' => $t['hari'], 'denda_terlambat' => $t['denda'],
+            'denda_rusak' => denda_kondisi('rusak', (int) $d['harga']), 'denda_hilang' => denda_kondisi('hilang', (int) $d['harga']),
+        ];
+    }
+    return $hasil;
+}
+
+/**
+ * Proses pengembalian satu atau beberapa eksemplar dalam satu nomor KMB.
+ * $items = [['detail_id' => int, 'kondisi' => 'baik'|'rusak'|'hilang'], ...]
+ * @return string nomor pengembalian
+ */
+function proses_kembali(array $items, int $petugas_id, ?string $tanggal = null): string
+{
+    $tanggal ??= hari_ini();
+    if (!$items) {
+        throw new RuntimeException('Pilih minimal satu eksemplar yang dikembalikan.');
+    }
+    $db = db();
+    $db->beginTransaction();
+    try {
+        $no = nomor_berikutnya('KMB', 'pengembalian', 'no_pengembalian', $tanggal);
+        $header = [];
+        foreach ($items as $it) {
+            $kondisi = (string) ($it['kondisi'] ?? '');
+            if (!in_array($kondisi, ['baik', 'rusak', 'hilang'], true)) {
+                throw new RuntimeException('Kondisi harus baik, rusak, atau hilang.');
+            }
+            $d = db_row(
+                'SELECT d.*, p.anggota_id, p.tgl_pinjam, e.kode_eksemplar, b.harga
+                 FROM peminjaman_detail d JOIN peminjaman p ON p.id = d.peminjaman_id
+                 JOIN eksemplar e ON e.id = d.eksemplar_id JOIN buku b ON b.id = e.buku_id
+                 WHERE d.id = ? FOR UPDATE',
+                [(int) ($it['detail_id'] ?? 0)]
+            );
+            if (!$d) {
+                throw new RuntimeException('Data peminjaman tidak ditemukan.');
+            }
+            if ($d['status'] !== 'dipinjam') {
+                throw new RuntimeException("Eksemplar {$d['kode_eksemplar']} sudah dikembalikan.");
+            }
+            if ($tanggal < $d['tgl_pinjam']) {
+                throw new RuntimeException('Tanggal kembali tidak boleh sebelum tanggal pinjam.');
+            }
+
+            $t = hitung_denda_terlambat($d['tgl_jatuh_tempo'], $tanggal, (int) $d['denda_per_hari']);
+            $db->prepare('INSERT INTO pengembalian (no_pengembalian, peminjaman_detail_id, tgl_kembali, kondisi, hari_terlambat, petugas_id) VALUES (?, ?, ?, ?, ?, ?)')
+                ->execute([$no, $d['id'], $tanggal, $kondisi, $t['hari'], $petugas_id]);
+            $kid = (int) $db->lastInsertId();
+
+            $denda = db()->prepare('INSERT INTO denda (pengembalian_id, anggota_id, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?, ?)');
+            if ($t['denda'] > 0) {
+                $denda->execute([$kid, $d['anggota_id'], 'terlambat', $t['denda'], "Terlambat {$t['hari']} hari x " . rupiah((int) $d['denda_per_hari'])]);
+            }
+            $dk = denda_kondisi($kondisi, (int) $d['harga']);
+            if ($dk > 0) {
+                $denda->execute([$kid, $d['anggota_id'], $kondisi, $dk, "Buku $kondisi (" . setting("denda_{$kondisi}_persen") . '% dari ' . rupiah((int) $d['harga']) . ')']);
+            }
+
+            $db->prepare("UPDATE peminjaman_detail SET status = 'kembali' WHERE id = ?")->execute([$d['id']]);
+            $status_eksemplar = ['baik' => 'tersedia', 'rusak' => 'rusak', 'hilang' => 'hilang'][$kondisi];
+            $db->prepare('UPDATE eksemplar SET status = ? WHERE id = ?')->execute([$status_eksemplar, $d['eksemplar_id']]);
+            $header[$d['peminjaman_id']] = true;
+        }
+        foreach (array_keys($header) as $pid) {
+            $db->prepare("UPDATE peminjaman SET status = 'selesai'
+                          WHERE id = ? AND NOT EXISTS (SELECT 1 FROM peminjaman_detail WHERE peminjaman_id = ? AND status = 'dipinjam')")
+                ->execute([$pid, $pid]);
+        }
+        $db->commit();
+        return $no;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Item yang masih dipinjam untuk form pengembalian. $q = no. transaksi (item transaksi itu),
+ * kode anggota, atau kode eksemplar (semua pinjaman aktif milik anggota tersebut).
+ */
+function cari_pinjaman_aktif(string $q): array
+{
+    $q = strtoupper(trim($q));
+    if ($q === '') {
+        return [];
+    }
+    $sql = "SELECT d.id AS detail_id, d.tgl_jatuh_tempo, d.denda_per_hari, p.id AS peminjaman_id, p.no_transaksi, p.tgl_pinjam,
+                   a.id AS anggota_id, a.nama AS anggota, a.kode_anggota, e.kode_eksemplar, b.judul, b.penulis, b.harga, b.foto_thumb, b.foto_cover
+            FROM peminjaman_detail d
+            JOIN peminjaman p ON p.id = d.peminjaman_id
+            JOIN anggota a ON a.id = p.anggota_id
+            JOIN eksemplar e ON e.id = d.eksemplar_id
+            JOIN buku b ON b.id = e.buku_id
+            WHERE d.status = 'dipinjam' AND ";
+    if (str_starts_with($q, 'PJM-')) {
+        return db_all($sql . 'p.no_transaksi = ? ORDER BY d.id', [$q]);
+    }
+    $anggota_id = db_val('SELECT id FROM anggota WHERE kode_anggota = ?', [$q])
+        ?: db_val("SELECT p.anggota_id FROM eksemplar e JOIN peminjaman_detail d ON d.eksemplar_id = e.id AND d.status = 'dipinjam'
+                   JOIN peminjaman p ON p.id = d.peminjaman_id WHERE e.kode_eksemplar = ?", [$q]);
+    return $anggota_id ? db_all($sql . 'p.anggota_id = ? ORDER BY d.tgl_jatuh_tempo, d.id', [$anggota_id]) : [];
+}
