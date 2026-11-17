@@ -148,6 +148,12 @@ $halaman['admin'][] = 'modules/transaksi/perpanjangan/index.php';
 $terlarang['admin'][] = 'modules/transaksi/perpanjangan/proses.php';
 $terlarang['anggota'][] = 'modules/transaksi/perpanjangan/index.php';
 
+// --- Barcode/QR (Task 20)
+foreach (['admin', 'petugas'] as $r) {
+    array_push($halaman[$r], 'modules/master/eksemplar/label.php?buku_id=1', 'modules/master/eksemplar/label.php?ids=1,2,abc', 'modules/master/eksemplar/label.php');
+}
+$terlarang['anggota'][] = 'modules/master/eksemplar/label.php?buku_id=1';
+
 // --- Export PDF (Task 19): semua laporan, admin & petugas
 foreach (['admin', 'petugas'] as $r) {
     foreach ($daftar_laporan as $l) {
