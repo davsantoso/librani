@@ -1,9 +1,30 @@
-.superpowers/
+# --- Kredensial: hanya config.example.php yang di-commit (README: Instalasi langkah 3)
 config/config.php
+
+# --- Upload pengguna: struktur folder + .htaccess (matikan eksekusi PHP) tetap di-commit,
+#     isinya tidak. Sampul data contoh disimpan di database/seed-covers/ dan disalin oleh seed.php.
 uploads/**
 !uploads/**/
 !uploads/**/.gitkeep
 !uploads/.htaccess
+
+# --- Dependensi Composer (Dompdf): dipasang dengan `composer install`, di-upload manual ke hosting
 vendor/
+composer.phar
+
+# --- Database: hanya schema.sql dan librani.sql (hasil database/export.php) yang di-commit;
+#     file backup/export lain tidak ikut
+database/*.sql
+!database/schema.sql
+!database/librani.sql
+
+# --- Alat bantu pengembangan
+.superpowers/
+.vscode/
+.idea/
+*.log
+
+# --- File sistem operasi
 .DS_Store
 Thumbs.db
+desktop.ini
