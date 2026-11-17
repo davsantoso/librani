@@ -79,6 +79,12 @@ array_push($halaman['publik'], '?q=laskar', '?kategori=1&hal=1', '?q=%25', 'modu
 array_push($halaman['anggota'], 'modules/katalog/index.php', 'modules/katalog/index.php?q=andrea', 'modules/katalog/detail.php?id=1');
 $terlarang['petugas'][] = 'modules/katalog/index.php';
 
+// --- Pengaturan (Task 11)
+$halaman['admin'][] = 'modules/pengaturan/index.php';
+$terlarang['petugas'][] = 'modules/pengaturan/index.php';
+$terlarang['anggota'][] = 'modules/pengaturan/index.php';
+$kirim['admin'][] = ['modules/pengaturan/index.php', ['nilai' => ['denda_per_hari' => '1000', 'nama_perpustakaan' => 'Perpustakaan Umum Librani']]];
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------

@@ -15,3 +15,20 @@ cek('user tidak ada ditolak', coba_login('tidakada', 'admin123') === null);
 db()->exec("UPDATE users SET is_active=0 WHERE username='admin'");
 cek('user nonaktif ditolak', coba_login('admin', 'admin123') === null);
 sama('dashboard url', BASE_URL . '/modules/dashboard/index.php', dashboard_url('petugas'));
+
+// ---- Pengaturan (Task 11)
+reset_db();
+simpan_setting(['denda_per_hari' => '2000']);
+sama('setting tersimpan & cache segar', '2000', setting('denda_per_hari'));
+simpan_setting(['nama_perpustakaan' => 'Perpustakaan Kota']);
+sama('teks boleh', 'Perpustakaan Kota', setting('nama_perpustakaan'));
+harus_gagal('nilai negatif ditolak', fn() => simpan_setting(['denda_per_hari' => '-1']), 'bilangan bulat');
+harus_gagal('nilai huruf ditolak', fn() => simpan_setting(['lama_pinjam' => 'abc']), 'bilangan bulat');
+harus_gagal('maks_pinjam 0 ditolak', fn() => simpan_setting(['maks_pinjam' => '0']), 'minimal 1');
+harus_gagal('kunci tak dikenal ditolak', fn() => simpan_setting(['hack' => '1']), 'tidak dikenal');
+harus_gagal('nama perpustakaan kosong ditolak', fn() => simpan_setting(['nama_perpustakaan' => ' ']), 'wajib');
+sama('gagal tidak mengubah apa pun', '2000', (function () {
+    try { simpan_setting(['denda_per_hari' => '5000', 'lama_pinjam' => 'x']); } catch (RuntimeException) {}
+    unset($GLOBALS['_setting']);
+    return setting('denda_per_hari');
+})());

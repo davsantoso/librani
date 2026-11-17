@@ -79,3 +79,37 @@ function cover_html(array $buku, string $ukuran = 'thumb'): string
     }
     return '<div class="cover-placeholder" role="img" aria-label="Sampul ' . e($buku['judul']) . '"><span>' . e($buku['judul']) . '</span></div>';
 }
+
+/**
+ * Simpan beberapa pengaturan sekaligus. Semua divalidasi dulu; jika satu salah, tidak ada yang disimpan.
+ * Kunci teks: nama_perpustakaan, alamat_perpustakaan. Kunci lain harus bilangan bulat >= 0.
+ */
+function simpan_setting(array $kv): void
+{
+    $ada = array_column(db_all('SELECT kunci FROM pengaturan'), 'kunci');
+    $teks = ['nama_perpustakaan', 'alamat_perpustakaan'];
+    $minimal_satu = ['maks_pinjam', 'lama_pinjam', 'masa_berlaku_anggota'];
+    foreach ($kv as $k => $v) {
+        $v = trim((string) $v);
+        if (!in_array($k, $ada, true)) {
+            throw new RuntimeException("Pengaturan $k tidak dikenal.");
+        }
+        if (in_array($k, $teks, true)) {
+            if ($k === 'nama_perpustakaan' && $v === '') {
+                throw new RuntimeException('Nama perpustakaan wajib diisi.');
+            }
+            continue;
+        }
+        if (!ctype_digit($v) || strlen($v) > 9) {
+            throw new RuntimeException("Nilai $k harus bilangan bulat 0 atau lebih.");
+        }
+        if (in_array($k, $minimal_satu, true) && (int) $v < 1) {
+            throw new RuntimeException("Nilai $k minimal 1.");
+        }
+    }
+    $st = db()->prepare('UPDATE pengaturan SET nilai = ? WHERE kunci = ?');
+    foreach ($kv as $k => $v) {
+        $st->execute([trim((string) $v), $k]);
+    }
+    unset($GLOBALS['_setting']);
+}
