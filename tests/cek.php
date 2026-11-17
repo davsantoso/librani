@@ -11,6 +11,11 @@ require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../includes/init.php';
 require __DIR__ . '/lib.php';
 
+// Warning/Notice/Deprecated dihitung sebagai kegagalan.
+set_error_handler(function (int $no, string $pesan, string $file, int $baris) {
+    throw new ErrorException($pesan, 0, $no, $file, $baris);
+});
+
 $filter = $argv[1] ?? '';
 foreach (glob(__DIR__ . '/cek_*.php') as $file) {
     $nama = basename($file, '.php');

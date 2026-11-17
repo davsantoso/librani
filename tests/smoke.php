@@ -12,10 +12,10 @@ $akun = [
 
 // Halaman yang harus terbuka (200) per role. Task berikutnya menambah ke daftar ini.
 $halaman = [
-    'publik' => ['', 'modules/auth/login.php'],
-    'admin' => ['modules/dashboard/index.php'],
-    'petugas' => ['modules/dashboard/index.php'],
-    'anggota' => ['modules/dashboard/index.php'],
+    'publik' => ['', 'modules/auth/login.php', 'modules/auth/register.php'],
+    'admin' => ['modules/dashboard/index.php', 'modules/auth/profil.php'],
+    'petugas' => ['modules/dashboard/index.php', 'modules/auth/profil.php'],
+    'anggota' => ['modules/dashboard/index.php', 'modules/auth/profil.php'],
 ];
 
 // Halaman yang harus ditolak (403) per role.
@@ -109,6 +109,20 @@ hasil($st === 404 || $st === 403, "[publik] database/seed.php tidak bisa diakses
 [$st] = minta($ch, 'config/config.php');
 hasil($st === 403 || $st === 404, "[publik] config/config.php tidak bisa diakses → $st");
 hasil(!login($ch, 'admin', 'salah-password'), '[publik] login password salah ditolak');
+
+// Register anggota baru lalu login: hanya melihat pesan menunggu verifikasi (FR-REG-03)
+$ch = sesi_baru();
+$n = substr((string) time(), -6);
+[, $body] = minta($ch, "modules/auth/register.php");
+[$st, , $loc] = minta($ch, "modules/auth/register.php", [
+    "csrf" => token($body), "nama" => "Smoke $n", "no_identitas" => "SMK$n", "jenis_kelamin" => "L",
+    "tgl_lahir" => "2001-01-01", "alamat" => "Jl. Smoke", "no_hp" => "08123$n", "email" => "smoke$n@contoh.id",
+    "username" => "smoke$n", "password" => "smoke12345", "password2" => "smoke12345",
+]);
+hasil($st === 302 && str_contains($loc, "login"), "[publik] register anggota baru → $st");
+hasil(login($ch, "smoke$n", "smoke12345"), "[menunggu] login anggota baru");
+[$st, $body] = minta($ch, "modules/dashboard/index.php");
+hasil($st === 200 && str_contains($body, "menunggu verifikasi"), "[menunggu] dashboard menampilkan pesan menunggu verifikasi");
 
 // Per role
 foreach ($akun as $role => [$u, $p]) {
