@@ -53,5 +53,22 @@ simpan_buku([
     'tahun_terbit' => '2005', 'halaman' => '529', 'harga' => '89000', 'jumlah_eksemplar' => 3, 'rak_id' => $rak,
     'sinopsis' => 'Kisah sepuluh anak Belitung yang bersekolah di SD Muhammadiyah yang hampir ditutup.',
 ], null);
+$bumi = simpan_buku([
+    'judul' => 'Bumi Manusia', 'penulis' => 'Pramoedya Ananta Toer', 'kategori_id' => $kat,
+    'tahun_terbit' => '1980', 'harga' => '120000', 'jumlah_eksemplar' => 2, 'rak_id' => $rak,
+], null);
 echo "Data master contoh dimuat.\n";
+
+// ---- Transaksi contoh sementara: anggota kedua terlambat 3 hari → 2 denda belum lunas ----
+$uSari = seed_user('Sari Wulandari', 'anggota2', 'anggota123', 'anggota');
+db()->prepare(
+    "INSERT INTO anggota (user_id, kode_anggota, no_identitas, nama, jenis_kelamin, tgl_lahir, alamat, no_hp, status, tgl_daftar, tgl_berlaku, verified_by)
+     VALUES (?, 'AGT-2026-0002', '3578010101950002', 'Sari Wulandari', 'P', '1995-02-02', 'Jl. Melati No. 9', '081298765432', 'aktif', ?, ?, ?)"
+)->execute([$uSari, hari_ini(), tambah_hari(hari_ini(), 365), $petugas1]);
+$sari = (int) db()->lastInsertId();
+$eks_bumi = array_column(db_all('SELECT id FROM eksemplar WHERE buku_id = ? ORDER BY id', [$bumi]), 'id');
+$pj = simpan_peminjaman($sari, $eks_bumi, $petugas1, tambah_hari(hari_ini(), -20));
+proses_kembali(array_map(fn($d) => ['detail_id' => $d, 'kondisi' => 'baik'],
+    array_column(db_all('SELECT id FROM peminjaman_detail WHERE peminjaman_id = ?', [$pj]), 'id')), $petugas1, tambah_hari(hari_ini(), -10));
+echo "Transaksi contoh dimuat.\n";
 echo "Selesai.\n";

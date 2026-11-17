@@ -344,3 +344,57 @@ function cari_pinjaman_aktif(string $q): array
                    JOIN peminjaman p ON p.id = d.peminjaman_id WHERE e.kode_eksemplar = ?", [$q]);
     return $anggota_id ? db_all($sql . 'p.anggota_id = ? ORDER BY d.tgl_jatuh_tempo, d.id', [$anggota_id]) : [];
 }
+
+// ===================== Denda =====================
+
+/** Lunasi satu atau beberapa denda milik SATU anggota sekaligus. @return string nomor kuitansi BYR-... */
+function bayar_denda(array $denda_ids, int $petugas_id, ?string $tanggal = null): string
+{
+    $tanggal ??= hari_ini();
+    $ids = array_values(array_unique(array_map('intval', $denda_ids)));
+    if (!$ids) {
+        throw new RuntimeException('Pilih minimal satu denda.');
+    }
+    $db = db();
+    $db->beginTransaction();
+    try {
+        $tanda = implode(',', array_fill(0, count($ids), '?'));
+        $rows = db_all("SELECT id, anggota_id, status FROM denda WHERE id IN ($tanda) FOR UPDATE", $ids);
+        if (count($rows) !== count($ids)) {
+            throw new RuntimeException('Data denda tidak ditemukan.');
+        }
+        if (count(array_unique(array_column($rows, 'anggota_id'))) > 1) {
+            throw new RuntimeException('Pembayaran hanya untuk denda satu anggota.');
+        }
+        foreach ($rows as $r) {
+            if ($r['status'] !== 'belum_lunas') {
+                throw new RuntimeException('Hanya denda yang belum lunas yang bisa dibayar.');
+            }
+        }
+        $no = nomor_berikutnya('BYR', 'denda', 'no_kuitansi', $tanggal);
+        $db->prepare("UPDATE denda SET status = 'lunas', tgl_bayar = ?, petugas_id = ?, no_kuitansi = ? WHERE id IN ($tanda)")
+            ->execute([$tanggal, $petugas_id, $no, ...$ids]);
+        $db->commit();
+        return $no;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+
+/** Bebaskan denda (khusus admin), alasan wajib dan dicatat di keterangan. */
+function bebaskan_denda(int $denda_id, int $admin_id, string $alasan): void
+{
+    if (trim($alasan) === '') {
+        throw new RuntimeException('Alasan pembebasan wajib diisi.');
+    }
+    $st = db()->prepare(
+        "UPDATE denda SET status = 'dibebaskan', petugas_id = ?, tgl_bayar = ?,
+                keterangan = CONCAT(COALESCE(keterangan, ''), ' | Dibebaskan: ', ?)
+         WHERE id = ? AND status = 'belum_lunas'"
+    );
+    $st->execute([$admin_id, hari_ini(), trim($alasan), $denda_id]);
+    if ($st->rowCount() === 0) {
+        throw new RuntimeException('Hanya denda yang belum lunas yang bisa dibebaskan.');
+    }
+}

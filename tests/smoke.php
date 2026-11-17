@@ -95,15 +95,26 @@ array_push($halaman['admin'], 'modules/transaksi/peminjaman/index.php', 'modules
 $terlarang['admin'][] = 'modules/transaksi/peminjaman/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/peminjaman/index.php';
 
-// --- Pengembalian (Task 14): kembalikan detail 1 dari peminjaman di atas.
+// --- Pengembalian (Task 14): kembalikan detail 3 (detail pertama peminjaman di atas; 1-2 milik transaksi seeder).
 $kmb = 'KMB-' . date('Ymd') . '-0001';
-$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['1' => '1'], 'kondisi' => ['1' => 'baik']]];
+$kirim['petugas'][] = ['modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', ['q' => 'AGT-2026-0001', 'kembali' => ['3' => '1'], 'kondisi' => ['3' => 'baik']]];
 array_push($halaman['petugas'], 'modules/transaksi/pengembalian/index.php', 'modules/transaksi/pengembalian/form.php',
     'modules/transaksi/pengembalian/form.php?q=AGT-2026-0001', 'modules/transaksi/pengembalian/form.php?q=PJM-' . date('Ymd') . '-0001',
     'modules/transaksi/pengembalian/form.php?q=tidak-ada', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
 array_push($halaman['admin'], 'modules/transaksi/pengembalian/index.php', "modules/transaksi/pengembalian/bukti.php?no=$kmb");
 $terlarang['admin'][] = 'modules/transaksi/pengembalian/form.php';
 $terlarang['anggota'][] = 'modules/transaksi/pengembalian/index.php';
+
+// --- Denda (Task 15): seeder membuat 2 denda (id 1 & 2) untuk anggota2 / AGT-2026-0002.
+$byr = 'BYR-' . date('Ymd') . '-0001';
+$kirim['petugas'][] = ['modules/transaksi/denda/index.php?anggota=AGT-2026-0002', ['anggota' => 'AGT-2026-0002', 'denda_ids' => ['1']], 'modules/transaksi/denda/bayar.php'];
+$kirim['admin'][] = ['modules/transaksi/denda/index.php', ['id' => '2', 'alasan' => 'Uji smoke'], 'modules/transaksi/denda/bebaskan.php'];
+array_push($halaman['petugas'], 'modules/transaksi/denda/index.php', 'modules/transaksi/denda/index.php?status=semua',
+    'modules/transaksi/denda/index.php?anggota=AGT-2026-0002', 'modules/transaksi/denda/index.php?anggota=TIDAK-ADA', "modules/transaksi/denda/kuitansi.php?no=$byr");
+array_push($halaman['admin'], 'modules/transaksi/denda/index.php?status=dibebaskan', "modules/transaksi/denda/kuitansi.php?no=$byr");
+$halaman['anggota'][] = 'modules/anggota/denda.php';
+$terlarang['petugas'][] = 'modules/transaksi/denda/bebaskan.php';
+$terlarang['anggota'][] = 'modules/transaksi/denda/index.php';
 
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
