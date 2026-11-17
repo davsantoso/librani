@@ -128,3 +128,36 @@ function fx_buku(int $jumlah_eksemplar = 1, array $o = []): array
     $eks = array_map("intval", array_column(db_all("SELECT id FROM eksemplar WHERE buku_id = ? ORDER BY id", [$buku_id]), "id"));
     return ["buku_id" => $buku_id, "eksemplar" => $eks];
 }
+
+function fx_petugas(): int
+{
+    static $n = 0;
+    $n++;
+    return insert('users', ['nama' => "Petugas $n", 'username' => "fxpetugas$n", 'email' => "fxpetugas$n@librani.test",
+        'password_hash' => password_hash('petugas123', PASSWORD_DEFAULT), 'role' => 'petugas']);
+}
+
+/** Anggota aktif (register + verifikasi). $o menimpa kolom tabel anggota, mis. ['tgl_berlaku' => '2026-01-01']. */
+function fx_anggota(array $o = [], string $tgl_verifikasi = '2026-01-05'): int
+{
+    static $petugas = null;
+    if (!$petugas || !db_val('SELECT 1 FROM users WHERE id = ?', [$petugas])) {
+        $petugas = fx_petugas();
+    }
+    $id = simpan_register(data_register(), null);
+    verifikasi_anggota($id, $petugas, $tgl_verifikasi);
+    foreach ($o as $kolom => $nilai) {
+        db()->prepare("UPDATE anggota SET $kolom = ? WHERE id = ?")->execute([$nilai, $id]);
+    }
+    return $id;
+}
+
+function user_id_anggota(int $anggota_id): int
+{
+    return (int) db_val('SELECT user_id FROM anggota WHERE id = ?', [$anggota_id]);
+}
+
+function detail_id_dari(int $peminjaman_id): int
+{
+    return (int) db_val('SELECT MIN(id) FROM peminjaman_detail WHERE peminjaman_id = ?', [$peminjaman_id]);
+}

@@ -3,16 +3,26 @@
 
 // ===================== Register anggota =====================
 
-/** @return string[] daftar pesan error (kosong = valid) */
-function validasi_register(array $in): array
+/**
+ * Validasi data anggota. $anggota_id diisi saat mengubah data: username/password tidak dicek
+ * dan keunikan email/no. identitas mengabaikan data milik anggota itu sendiri.
+ * @return string[] daftar pesan error (kosong = valid)
+ */
+function validasi_register(array $in, ?int $anggota_id = null): array
 {
     $v = fn(string $k) => trim((string) ($in[$k] ?? ''));
     $err = [];
     $wajib = [
         'nama' => 'Nama', 'no_identitas' => 'No. identitas', 'jenis_kelamin' => 'Jenis kelamin',
-        'tgl_lahir' => 'Tanggal lahir', 'alamat' => 'Alamat', 'no_hp' => 'No. HP',
-        'email' => 'Email', 'username' => 'Username', 'password' => 'Password',
+        'tgl_lahir' => 'Tanggal lahir', 'alamat' => 'Alamat', 'no_hp' => 'No. HP', 'email' => 'Email',
     ];
+    $user_id = 0;
+    if ($anggota_id) {
+        $user_id = (int) db_val('SELECT user_id FROM anggota WHERE id = ?', [$anggota_id]);
+        $in['username'] = $in['password'] = '';
+    } else {
+        $wajib += ['username' => 'Username', 'password' => 'Password'];
+    }
     foreach ($wajib as $k => $label) {
         if ($v($k) === '') {
             $err[] = "$label wajib diisi.";
@@ -42,13 +52,81 @@ function validasi_register(array $in): array
     if ($v('username') !== '' && db_val('SELECT 1 FROM users WHERE username = ?', [$v('username')])) {
         $err[] = 'Username sudah dipakai.';
     }
-    if ($v('email') !== '' && db_val('SELECT 1 FROM users WHERE email = ?', [$v('email')])) {
+    if ($v('email') !== '' && db_val('SELECT 1 FROM users WHERE email = ? AND id <> ?', [$v('email'), $user_id])) {
         $err[] = 'Email sudah dipakai.';
     }
-    if ($v('no_identitas') !== '' && db_val('SELECT 1 FROM anggota WHERE no_identitas = ?', [$v('no_identitas')])) {
+    if ($v('no_identitas') !== '' && db_val('SELECT 1 FROM anggota WHERE no_identitas = ? AND id <> ?', [$v('no_identitas'), (int) $anggota_id])) {
         $err[] = 'No. identitas sudah terdaftar.';
     }
     return $err;
+}
+
+/** Ubah data diri anggota (oleh petugas). $foto null = foto tidak diganti. Panggil validasi_register($in, $id) dulu. */
+function ubah_anggota(int $id, array $in, ?string $foto): void
+{
+    $v = fn(string $k) => trim((string) ($in[$k] ?? ''));
+    $lama = db_row('SELECT * FROM anggota WHERE id = ?', [$id]) ?? throw new RuntimeException('Anggota tidak ditemukan.');
+    $db = db();
+    $db->beginTransaction();
+    try {
+        $db->prepare('UPDATE anggota SET no_identitas = ?, nama = ?, jenis_kelamin = ?, tgl_lahir = ?, alamat = ?, no_hp = ?, foto = ? WHERE id = ?')
+            ->execute([$v('no_identitas'), $v('nama'), $v('jenis_kelamin'), $v('tgl_lahir'), $v('alamat'), $v('no_hp'), $foto ?? $lama['foto'], $id]);
+        $db->prepare('UPDATE users SET nama = ?, email = ? WHERE id = ?')->execute([$v('nama'), $v('email'), $lama['user_id']]);
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+    if ($foto && $lama['foto']) {
+        hapus_gambar('anggota', $lama['foto']);
+    }
+}
+
+/** Setujui pendaftar: status aktif, kode anggota otomatis, masa berlaku sesuai pengaturan. @return string kode anggota */
+function verifikasi_anggota(int $anggota_id, int $petugas_id, ?string $tanggal = null): string
+{
+    $tanggal ??= hari_ini();
+    $db = db();
+    $db->beginTransaction();
+    try {
+        $status = db_val('SELECT status FROM anggota WHERE id = ? FOR UPDATE', [$anggota_id]);
+        if ($status !== 'menunggu') {
+            throw new RuntimeException('Hanya anggota berstatus menunggu yang bisa diverifikasi.');
+        }
+        $kode = kode_anggota_berikutnya((int) substr($tanggal, 0, 4));
+        $db->prepare("UPDATE anggota SET status = 'aktif', kode_anggota = ?, tgl_berlaku = ?, verified_by = ?, alasan_tolak = NULL WHERE id = ?")
+            ->execute([$kode, tambah_hari($tanggal, (int) setting('masa_berlaku_anggota')), $petugas_id, $anggota_id]);
+        $db->commit();
+        return $kode;
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
+}
+
+function tolak_anggota(int $anggota_id, int $petugas_id, string $alasan): void
+{
+    if (trim($alasan) === '') {
+        throw new RuntimeException('Alasan penolakan wajib diisi.');
+    }
+    if (db_val('SELECT status FROM anggota WHERE id = ?', [$anggota_id]) !== 'menunggu') {
+        throw new RuntimeException('Hanya anggota berstatus menunggu yang bisa ditolak.');
+    }
+    db()->prepare("UPDATE anggota SET status = 'ditolak', alasan_tolak = ?, verified_by = ? WHERE id = ?")
+        ->execute([trim($alasan), $petugas_id, $anggota_id]);
+}
+
+/** Perpanjang masa berlaku dari tanggal yang lebih akhir (tgl_berlaku lama atau hari ini); status jadi aktif. */
+function perpanjang_keanggotaan(int $anggota_id, ?string $tanggal = null): void
+{
+    $a = db_row('SELECT * FROM anggota WHERE id = ?', [$anggota_id]);
+    if (!$a || !$a['kode_anggota']) {
+        throw new RuntimeException('Anggota belum diverifikasi.');
+    }
+    $dasar = max((string) $a['tgl_berlaku'], $tanggal ?? hari_ini());
+    db()->prepare("UPDATE anggota SET tgl_berlaku = ?, status = 'aktif' WHERE id = ?")
+        ->execute([tambah_hari($dasar, (int) setting('masa_berlaku_anggota')), $anggota_id]);
+    db()->prepare('UPDATE users SET is_active = 1 WHERE id = ?')->execute([$a['user_id']]);
 }
 
 /** Simpan pendaftar baru (status menunggu). Panggil validasi_register() lebih dulu. */

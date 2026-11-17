@@ -61,6 +61,19 @@ $kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'stat
 $kirim['petugas'][] = ['modules/master/eksemplar/index.php', ['id' => '1', 'status' => 'tersedia'], 'modules/master/eksemplar/tandai.php'];
 $terlarang['anggota'][] = 'modules/master/eksemplar/index.php';
 
+// --- Anggota (Task 9)
+foreach (['admin', 'petugas'] as $r) {
+    array_push($halaman[$r], 'modules/master/anggota/index.php', 'modules/master/anggota/index.php?status=menunggu',
+        'modules/master/anggota/form.php', 'modules/master/anggota/form.php?id=1', 'modules/master/anggota/detail.php?id=1', 'modules/master/anggota/kartu.php?id=1');
+}
+$halaman['anggota'][] = 'modules/master/anggota/kartu.php';
+array_push($terlarang['anggota'], 'modules/master/anggota/index.php', 'modules/master/anggota/detail.php?id=1');
+$kirim['petugas'][] = ['modules/master/anggota/form.php', [
+    'nama' => "Anggota Loket $n", 'no_identitas' => "LKT$n", 'jenis_kelamin' => 'P', 'tgl_lahir' => '1999-09-09',
+    'alamat' => 'Jl. Loket', 'no_hp' => "08777$n", 'email' => "loket$n@contoh.id", 'username' => "loket$n", 'password' => 'loket12345',
+]];
+$kirim['petugas'][] = ['modules/master/anggota/detail.php?id=1', ['id' => '1', 'aksi' => 'perpanjang'], 'modules/master/anggota/verifikasi.php'];
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------
