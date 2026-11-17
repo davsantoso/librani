@@ -17,6 +17,7 @@ require_once __DIR__ . '/upload.php';
 require_once __DIR__ . '/nomor.php';
 require_once __DIR__ . '/master.php';
 require_once __DIR__ . '/katalog.php';
+require_once __DIR__ . '/sirkulasi.php';
 
 if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
