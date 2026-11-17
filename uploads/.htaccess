@@ -1,0 +1,8 @@
+# Matikan eksekusi skrip di folder upload.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<FilesMatch "\.(php|phtml|phar|php\d)$">
+    Require all denied
+</FilesMatch>
+Options -Indexes

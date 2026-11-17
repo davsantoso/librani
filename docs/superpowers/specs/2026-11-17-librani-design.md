@@ -14,10 +14,10 @@ Librani adalah tugas kuliah studi kasus CRUD yang akan didemokan langsung dari U
 
 ## 2. Batasan
 
-- PHP **8.3** (Laragon lokal; sama dengan kelas versi di InfinityFree), MySQL 8.4 lokal, MySQL/MariaDB di InfinityFree.
+- PHP: kode harus kompatibel PHP **8.2+** (lokal XAMPP memakai PHP 8.5, hosting InfinityFree 8.x). MariaDB lokal (XAMPP) dan MySQL/MariaDB di InfinityFree.
 - SQL harus jalan di kedua engine: charset `utf8mb4`, collation **`utf8mb4_unicode_ci`** (bukan `utf8mb4_0900_ai_ci` yang ditolak MariaDB), tanpa fitur khusus MySQL 8.
 - InfinityFree: tanpa SSH, tanpa cron, host DB bukan localhost, ada batas hit. Upload lewat FTP.
-- Lokal: Laragon dengan virtual host `http://librani.test`; hosting di root subdomain. Semua URL dibangun dari `BASE_URL` di config.
+- Lokal: XAMPP, proyek di-junction ke `C:\xampp\htdocs\librani` → `http://localhost/librani`; hosting di root subdomain. Semua URL dibangun dari `BASE_URL` di config.
 
 ## 3. Pendekatan (dipilih: 1)
 
@@ -30,7 +30,7 @@ Librani adalah tugas kuliah studi kasus CRUD yang akan didemokan langsung dari U
 ## 4. Keputusan pemilik proyek
 
 - Semua P1 dikerjakan.
-- Environment lokal: Laragon.
+- Environment lokal: XAMPP (Laragon 7+ butuh lisensi berbayar, diganti XAMPP).
 - Data contoh: buku dan penulis **asli**, utamakan penulis Indonesia.
 - Foto sampul dicari manual oleh pemilik proyek, lalu disimpan sesuai daftar nama file yang disiapkan builder.
 
@@ -88,7 +88,7 @@ Logika yang dipakai di lebih dari satu tempat (syarat pinjam, hitung denda, pros
 
 ## 9. Export, barcode, upload
 
-- PDF: Dompdf lewat Composer (Laragon sudah menyertakan Composer). `vendor/` **tidak** di-commit; README menulis `composer install`; `vendor/` di-upload lewat FTP ke hosting.
+- PDF: Dompdf lewat Composer (composer.phar diunduh terpisah). `vendor/` **tidak** di-commit; README menulis `composer install`; `vendor/` di-upload lewat FTP ke hosting.
 - Excel: SheetJS di browser dari tabel yang sedang tampil.
 - Barcode Code128 untuk eksemplar (label cetak per buku/rak), QR untuk kartu anggota. Scan: scanner USB = input teks biasa; kamera via html5-qrcode (butuh HTTPS atau localhost). Input manual selalu tersedia.
 - Upload: cek MIME dengan `finfo`, ukuran, nama acak `bin2hex(random_bytes(16))`. GD resize ke 600px + thumb 200px; kalau GD tidak ada, simpan asli dengan batas 1 MB. `.htaccess` di `uploads/` mematikan eksekusi PHP; `.htaccess` di `config/` deny all.
