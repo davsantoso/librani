@@ -340,12 +340,15 @@ function cari_pinjaman_aktif(string $q): array
             JOIN buku b ON b.id = e.buku_id
             WHERE d.status = 'dipinjam' AND ";
     if (str_starts_with($q, 'PJM-')) {
-        return db_all($sql . 'p.no_transaksi = ? ORDER BY d.id', [$q]);
+        return array_map(fn($i) => $i + ['dipilih' => true], db_all($sql . 'p.no_transaksi = ? ORDER BY d.id', [$q]));
     }
     $anggota_id = db_val('SELECT id FROM anggota WHERE kode_anggota = ?', [$q])
         ?: db_val("SELECT p.anggota_id FROM eksemplar e JOIN peminjaman_detail d ON d.eksemplar_id = e.id AND d.status = 'dipinjam'
                    JOIN peminjaman p ON p.id = d.peminjaman_id WHERE e.kode_eksemplar = ?", [$q]);
-    return $anggota_id ? db_all($sql . 'p.anggota_id = ? ORDER BY d.tgl_jatuh_tempo, d.id', [$anggota_id]) : [];
+    $hasil = $anggota_id ? db_all($sql . 'p.anggota_id = ? ORDER BY d.tgl_jatuh_tempo, d.id', [$anggota_id]) : [];
+    // Scan satu kode eksemplar → hanya eksemplar itu yang dicentang; buku lain milik anggota tetap tampil tapi tidak terpilih.
+    $scan_eksemplar = in_array($q, array_column($hasil, 'kode_eksemplar'), true);
+    return array_map(fn($i) => $i + ['dipilih' => !$scan_eksemplar || $i['kode_eksemplar'] === $q], $hasil);
 }
 
 // ===================== Denda =====================

@@ -62,7 +62,7 @@ require ROOT_DIR . '/includes/layout/header.php';
                 <?php $pr = $pratinjau[$i['detail_id']]; ?>
                 <div class="border rounded p-2 d-flex flex-wrap gap-3 align-items-center baris-kembali"
                      data-terlambat="<?= $pr['denda_terlambat'] ?>" data-rusak="<?= $pr['denda_rusak'] ?>" data-hilang="<?= $pr['denda_hilang'] ?>">
-                    <input class="form-check-input fs-4 m-0" type="checkbox" name="kembali[<?= $i['detail_id'] ?>]" value="1" checked aria-label="Kembalikan <?= e($i['kode_eksemplar']) ?>">
+                    <input class="form-check-input fs-4 m-0" type="checkbox" name="kembali[<?= $i['detail_id'] ?>]" value="1" <?= $i['dipilih'] ? 'checked' : '' ?> aria-label="Kembalikan <?= e($i['kode_eksemplar']) ?>">
                     <div class="cover-kecil"><?= cover_html($i) ?></div>
                     <div class="flex-grow-1">
                         <div class="fw-semibold"><?= e($i['judul']) ?></div>

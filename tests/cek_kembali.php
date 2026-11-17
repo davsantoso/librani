@@ -68,3 +68,9 @@ sama('cari kode eksemplar → semua pinjaman aktif anggotanya', 3, count(cari_pi
 proses_kembali([['detail_id' => detail_id_dari($pj1), 'kondisi' => 'baik']], $p, '2026-11-05');
 sama('yang sudah kembali tidak muncul', 2, count(cari_pinjaman_aktif($kode_a)));
 sama('kosong → []', [], cari_pinjaman_aktif('  '));
+
+// ---- Review: scan satu kode eksemplar hanya mencentang eksemplar itu
+$hasil = cari_pinjaman_aktif($kode_e);
+sama('scan eksemplar: hanya 1 yang dipilih', [$kode_e], array_column(array_filter($hasil, fn($i) => $i['dipilih']), 'kode_eksemplar'));
+sama('cari kode anggota: semua dipilih', count(cari_pinjaman_aktif($kode_a)), count(array_filter(cari_pinjaman_aktif($kode_a), fn($i) => $i['dipilih'])));
+sama('cari no transaksi: semua item transaksi dipilih', [true], array_values(array_unique(array_column(cari_pinjaman_aktif((string) db_val('SELECT no_transaksi FROM peminjaman WHERE id = ?', [$pj2])), 'dipilih'))));
