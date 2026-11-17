@@ -88,3 +88,32 @@ function ganti_password(int $user_id, string $lama, string $baru): void
     }
     db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([password_hash($baru, PASSWORD_DEFAULT), $user_id]);
 }
+
+// ===================== Soft delete umum =====================
+
+/**
+ * Hapus permanen jika belum dipakai tabel lain; jika sudah dipakai, nonaktifkan (is_active = 0).
+ * $relasi = [[tabel_anak, kolom_fk], ...]. Nama tabel/kolom divalidasi whitelist karena tidak bisa di-bind.
+ * @return string 'dihapus' | 'dinonaktifkan'
+ */
+function hapus_atau_nonaktifkan(string $tabel, int $id, array $relasi): string
+{
+    $boleh = ['kategori', 'penerbit', 'rak', 'buku', 'users'];
+    $anak_boleh = ['buku', 'eksemplar', 'peminjaman', 'pengembalian', 'denda', 'anggota', 'perpanjangan', 'reservasi'];
+    if (!in_array($tabel, $boleh, true)) {
+        throw new InvalidArgumentException("Tabel $tabel tidak bisa dihapus lewat fungsi ini.");
+    }
+    foreach ($relasi as [$anak, $kolom]) {
+        if (!in_array($anak, $anak_boleh, true) || !preg_match('/^[a-z_]+$/', $kolom)) {
+            throw new InvalidArgumentException('Relasi tidak valid.');
+        }
+    }
+    foreach ($relasi as [$anak, $kolom]) {
+        if (db_val("SELECT 1 FROM $anak WHERE $kolom = ? LIMIT 1", [$id])) {
+            db()->prepare("UPDATE $tabel SET is_active = 0 WHERE id = ?")->execute([$id]);
+            return 'dinonaktifkan';
+        }
+    }
+    db()->prepare("DELETE FROM $tabel WHERE id = ?")->execute([$id]);
+    return 'dihapus';
+}

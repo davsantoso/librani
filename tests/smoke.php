@@ -25,6 +25,21 @@ $terlarang = [
     'anggota' => [],
 ];
 
+// Form POST yang harus berhasil (302, tanpa error) per role: [halaman form, data].
+$kirim = ['admin' => [], 'petugas' => [], 'anggota' => []];
+
+// --- Master kategori, penerbit, rak (Task 5)
+$n = substr((string) time(), -5);
+foreach (['kategori', 'penerbit', 'rak'] as $m) {
+    array_push($halaman['admin'], "modules/master/$m/index.php", "modules/master/$m/form.php");
+    $halaman['petugas'][] = "modules/master/$m/index.php";
+    $terlarang['petugas'][] = "modules/master/$m/form.php";
+    $terlarang['anggota'][] = "modules/master/$m/index.php";
+}
+$kirim['admin'][] = ['modules/master/kategori/form.php', ['kode' => "S$n", 'nama' => "Smoke $n", 'deskripsi' => '']];
+$kirim['admin'][] = ['modules/master/penerbit/form.php', ['nama' => "Penerbit Smoke $n", 'kota' => 'Surabaya', 'telepon' => '031-123456']];
+$kirim['admin'][] = ['modules/master/rak/form.php', ['kode' => "S$n", 'nama' => "Rak Smoke $n", 'lantai' => '1']];
+
 // ---------------------------------------------------------------------------
 
 $ok = 0;
@@ -134,6 +149,12 @@ foreach ($akun as $role => [$u, $p]) {
     foreach ($terlarang[$role] as $path) {
         [$st] = minta($ch, $path);
         hasil($st === 403, "[$role] $path ditolak → $st");
+    }
+    foreach ($kirim[$role] as [$path, $data]) {
+        [, $body] = minta($ch, $path);
+        [$st, $body, $loc] = minta($ch, $path, ['csrf' => token($body)] + $data);
+        $err = ada_error_php($body);
+        hasil($st === 302 && !$err, "[$role] POST $path → $st" . ($err ? " ($err)" : '') . ($st === 200 ? ' (validasi gagal?)' : ''));
     }
     // Logout lalu halaman terproteksi harus kembali ke login
     [, $body] = minta($ch, 'modules/dashboard/index.php');

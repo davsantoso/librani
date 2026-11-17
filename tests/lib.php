@@ -95,3 +95,26 @@ function data_register(array $o = []): array
         'password' => 'rahasia123',
     ];
 }
+
+/** INSERT sederhana untuk fixture. Nama tabel/kolom berasal dari kode tes, bukan input. */
+function insert(string $tabel, array $data): int
+{
+    $kolom = implode(', ', array_keys($data));
+    $tanda = implode(', ', array_fill(0, count($data), '?'));
+    db()->prepare("INSERT INTO $tabel ($kolom) VALUES ($tanda)")->execute(array_values($data));
+    return (int) db()->lastInsertId();
+}
+
+/** Buku + $jumlah eksemplar tersedia. @return array{buku_id:int, eksemplar:int[]} */
+function fx_buku(int $jumlah_eksemplar = 1, array $o = []): array
+{
+    static $n = 0;
+    $n++;
+    $o['kategori_id'] ??= insert('kategori', ['kode' => "K$n", 'nama' => "Kategori $n"]);
+    $buku_id = insert('buku', $o + ['judul' => "Buku Uji $n", 'penulis' => "Penulis $n"]);
+    $eks = [];
+    for ($i = 1; $i <= $jumlah_eksemplar; $i++) {
+        $eks[] = insert('eksemplar', ['buku_id' => $buku_id, 'kode_eksemplar' => sprintf('BK%04d-%02d', $buku_id, $i)]);
+    }
+    return ['buku_id' => $buku_id, 'eksemplar' => $eks];
+}
