@@ -1,4 +1,6 @@
 <?php
+// Dibungkus fungsi anonim agar variabel sidebar ($label, $path, ...) tidak menimpa variabel halaman.
+(function (): void {
 // Menu per role sesuai matriks hak akses PRD. Item hanya tampil jika halamannya sudah ada.
 $menu = [
     ['Dashboard', 'bi-speedometer2', 'modules/dashboard/index.php', ['admin', 'petugas', 'anggota']],
@@ -51,3 +53,4 @@ $grup = null;
         </nav>
     </div>
 </aside>
+<?php })(); ?>

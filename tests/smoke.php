@@ -74,6 +74,11 @@ $kirim['petugas'][] = ['modules/master/anggota/form.php', [
 ]];
 $kirim['petugas'][] = ['modules/master/anggota/detail.php?id=1', ['id' => '1', 'aksi' => 'perpanjang'], 'modules/master/anggota/verifikasi.php'];
 
+// --- Katalog (Task 10)
+array_push($halaman['publik'], '?q=laskar', '?kategori=1&hal=1', '?q=%25', 'modules/katalog/detail.php?id=1');
+array_push($halaman['anggota'], 'modules/katalog/index.php', 'modules/katalog/index.php?q=andrea', 'modules/katalog/detail.php?id=1');
+$terlarang['petugas'][] = 'modules/katalog/index.php';
+
 $kirim['admin'][] = ['modules/master/users/form.php', ['nama' => "Petugas Smoke $n", 'username' => "ptg$n", 'email' => "ptg$n@librani.test", 'role' => 'petugas', 'password' => 'petugas123', 'is_active' => '1']];
 
 // ---------------------------------------------------------------------------
@@ -174,6 +179,8 @@ hasil($st === 302 && str_contains($loc, "login"), "[publik] register anggota bar
 hasil(login($ch, "smoke$n", "smoke12345"), "[menunggu] login anggota baru");
 [$st, $body] = minta($ch, "modules/dashboard/index.php");
 hasil($st === 200 && str_contains($body, "menunggu verifikasi"), "[menunggu] dashboard menampilkan pesan menunggu verifikasi");
+[$st, $body] = minta($ch, "modules/katalog/index.php");
+hasil($st === 200 && str_contains($body, "Laskar Pelangi"), "[menunggu] katalog anggota tetap bisa dibuka");
 
 // Per role
 foreach ($akun as $role => [$u, $p]) {
